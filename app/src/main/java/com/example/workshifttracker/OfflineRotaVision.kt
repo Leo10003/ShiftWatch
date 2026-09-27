@@ -141,6 +141,8 @@ internal object OfflineRotaVision {
     private val signatureCache = WeakHashMap<Bitmap, MutableMap<String, Signature?>>()
     private val candidateCache = WeakHashMap<Bitmap, MutableMap<String, List<Candidate>>>()
     private val candidateTraceCache = WeakHashMap<Bitmap, MutableMap<String, RotaDiagnosticEvidence.CandidatePipeline>>()
+    // Experimental candidates are kept separate from production matches. They never affect acceptance.
+    private val shadowOcrCache = WeakHashMap<Bitmap, MutableMap<String, List<Candidate>>>()
 
     private fun candidateKey(assist: ScheduleImporter.AssistData, column: Int, left: Int, right: Int): String =
         "${System.identityHashCode(assist)}:$column:$left:$right:${assist.tokens.size}"
@@ -163,7 +165,8 @@ internal object OfflineRotaVision {
         val perBitmap = candidateCache.getOrPut(bitmap) { mutableMapOf() }
         val key = candidateKey(assist, column, left, right)
         return perBitmap.getOrPut(key) {
-            val (candidates, trace) = buildCandidates(bitmap, assist, column, left, right, sx, sy)
+            val (candidates, trace, shadow) = buildCandidates(bitmap, assist, column, left, right, sx, sy)
+            shadowOcrCache.getOrPut(bitmap) { mutableMapOf() }[key] = shadow
             candidateTraceCache.getOrPut(bitmap) { mutableMapOf() }[key] = trace
             candidates
         }
@@ -405,8 +408,8 @@ internal object OfflineRotaVision {
             val right = (sourceRight * sx).toInt().coerceIn(left + 2, bitmap.width)
             val candidates = cachedCandidates(bitmap, assist, column, left, right, sx, sy)
             scanned += candidates.size
-            val ranked = candidates.mapNotNull { candidate ->
-                val sig = cachedSignature(bitmap, left, right, candidate.band) ?: return@mapNotNull null
+            fun scoreCandidate(candidate: Candidate): Ranked? {
+                val sig = cachedSignature(bitmap, left, right, candidate.band) ?: return null
                 val scores = profiles.map { similarity(it, sig) }.sorted()
                 val median = scores[scores.size / 2]
                 val weakest = scores.first()
@@ -434,15 +437,26 @@ internal object OfflineRotaVision {
                         score += separationAdjustment
                     }
                 }
-                Ranked(candidate, score.coerceIn(0f, 1f), positive, negative, score - negative,
+                return Ranked(candidate, score.coerceIn(0f, 1f), positive, negative, score - negative,
                     rawSeparation, confuserPenalty, separationAdjustment)
-            }.sortedWith(compareByDescending<Ranked> { it.score }
+            }
+            val shadows = shadowOcrCache[bitmap]?.get(candidateKey(assist, column, left, right)).orEmpty()
+                .mapNotNull(::scoreCandidate)
+            val shadowEvidence = RotaDiagnosticEvidence.shadowEvidence(shadows.map { item ->
+                val documentY = item.candidate.band.center / sy
+                RotaDiagnosticEvidence.ShadowScore(
+                    RotaGridModel.blockIndexForY(assist, column, documentY),
+                    RotaDiagnosticEvidence.verticalDecile(documentY, assist.imageHeight.toFloat()),
+                    item.score, item.positive, item.negative)
+            })
+            val ranked = candidates.mapNotNull(::scoreCandidate).sortedWith(compareByDescending<Ranked> { it.score }
                 .thenBy { it.candidate.band.top }.thenBy { it.candidate.band.bottom })
             val best = ranked.firstOrNull()
             if (best == null) {
                 decisions[column] = RotaDiagnosticEvidence.ProfileDecision(column, candidates.size, 0, null, null, null, null,
                     if (candidates.isEmpty()) "no_candidate_lines" else "no_usable_signatures",
-                    pipeline = cachedCandidateTrace(bitmap, assist, column, left, right))
+                    pipeline = cachedCandidateTrace(bitmap, assist, column, left, right),
+                    shadowOcr = shadowEvidence)
                 continue
             }
             val runner = ranked.getOrNull(1)?.score ?: 0f
@@ -499,6 +513,7 @@ internal object OfflineRotaVision {
                     )
                 }, runnerOverlapFraction = runnerOverlap, runnerIsSamePhysicalBlock = runnerSameBlock,
                 pipeline = cachedCandidateTrace(bitmap, assist, column, left, right),
+                shadowOcr = shadowEvidence,
                 candidateSources = RotaDiagnosticEvidence.sourceEvidence(ranked.map { item ->
                     val documentY = item.candidate.band.center / sy
                     val origin = if (item.candidate.ocrText == null) "ink_gap_probe" else "ocr_token_band"
@@ -842,7 +857,7 @@ internal object OfflineRotaVision {
         right: Int,
         sx: Float,
         sy: Float
-    ): Pair<List<Candidate>, RotaDiagnosticEvidence.CandidatePipeline> {
+    ): Triple<List<Candidate>, RotaDiagnosticEvidence.CandidatePipeline, List<Candidate>> {
         val strict = detectTextBands(bitmap, left, right)
         val bands = strict.map { Candidate(it, null) }.toMutableList()
         var looseObserved = 0
@@ -871,6 +886,7 @@ internal object OfflineRotaVision {
         // candidate crops when a photograph is scanned repeatedly.
         var tokensMerged = 0
         var tokensAdded = 0
+        val shadowOriginals = mutableListOf<Candidate>()
         val eligibleTokensByBlock = sortedMapOf<Int, Int>()
         val ocrMergedByBlock = sortedMapOf<Int, Int>()
         val ocrAddedByBlock = sortedMapOf<Int, Int>()
@@ -889,6 +905,9 @@ internal object OfflineRotaVision {
             val nearestIndex = bands.indices.minByOrNull { abs(bands[it].band.center - candidate.band.center) }
             if (nearestIndex != null && abs(bands[nearestIndex].band.center - candidate.band.center) <= max(10f, bitmap.height * 0.010f)) {
                 val old = bands[nearestIndex]
+                // Keep the original OCR crop as a SHADOW only when merging changes its geometry.
+                // No OCR text, image coordinates or signatures are exported.
+                if (old.band != candidate.band) shadowOriginals += candidate
                 tokensMerged++
                 if (tokenBlock != null && tokenBlock >= 0) {
                     ocrMergedByBlock[tokenBlock] = (ocrMergedByBlock[tokenBlock] ?: 0) + 1
@@ -965,7 +984,13 @@ internal object OfflineRotaVision {
             ocrMergedByBlock = ocrMergedByBlock,
             ocrAddedByBlock = ocrAddedByBlock
         )
-        return survivors to trace
+        val shadow = shadowOriginals.filter { it.band.height in
+            max(5, (bitmap.height * 0.0035f).toInt())..max(42, (bitmap.height * 0.075f).toInt()) &&
+            it.band.center in bitmapBodyTop..bitmapBodyBottom
+        }.filter { original -> survivors.none { it.band == original.band } }
+            .distinctBy { it.band.top to it.band.bottom }
+            .sortedWith(compareBy<Candidate> { it.band.top }.thenBy { it.band.bottom })
+        return Triple(survivors, trace, shadow)
     }
 
 

@@ -36,7 +36,9 @@ jobs:
       - name: Configure Gradle caching
         uses: gradle/actions/setup-gradle@v4
       - name: Validate reference cases and project metadata
-        run: python3 tools/verify_regression_cases.py
+        run: |
+          python3 tools/verify_regression_cases.py
+          python3 tools/verify-recognition-baseline.py
       - name: Compile, test and lint
         run: bash ./gradlew --no-daemon --stacktrace :app:assembleDebug :app:testDebugUnitTest :app:lintDebug
       - name: Upload test and lint reports

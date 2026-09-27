@@ -1024,7 +1024,7 @@ private fun ImportReviewSheet(
                     // Privacy by default: no name, photo, OCR text, exact dates or handwriting
                     // crops. Even the candidate IDs are replaced with local ordinal indices.
                     val result = JSONObject().apply {
-                        put("schemaVersion", 9)
+                        put("schemaVersion", 10)
                         put("appVersion", installedAppVersion)
                         put("sessionId", diagnosticSession)
                         put("captureUtc", java.time.Instant.now().toString())
@@ -1149,6 +1149,19 @@ private fun ImportReviewSheet(
                                         put("decision", decision.status)
                                         put("runnerOverlapFraction", decision.runnerOverlapFraction?.toDouble() ?: JSONObject.NULL)
                                         put("runnerIsSamePhysicalBlock", decision.runnerIsSamePhysicalBlock ?: JSONObject.NULL)
+                                        put("shadowOcr", decision.shadowOcr?.let { shadow -> JSONObject().apply {
+                                            put("scoredCount", shadow.scoredCount)
+                                            put("best", shadow.best?.let { best -> JSONObject().apply {
+                                                put("physicalBlockIndex", best.physicalBlockIndex ?: JSONObject.NULL)
+                                                put("verticalDecile", best.verticalDecile)
+                                                put("adjustedScore", best.adjustedScore.toDouble())
+                                                put("positiveScore", best.positiveScore.toDouble())
+                                                put("confuserScore", best.confuserScore.toDouble())
+                                            } } ?: JSONObject.NULL)
+                                            put("scoredByBlock", JSONObject().apply {
+                                                shadow.scoredByBlock.forEach { (block, count) -> put(block.toString(), count) }
+                                            })
+                                        } } ?: JSONObject.NULL)
                                         put("candidatePipeline", decision.pipeline?.let { pipe -> JSONObject().apply {
                                             put("strictCount", pipe.strictCount)
                                             put("looseObserved", pipe.looseObserved)
@@ -1223,6 +1236,19 @@ private fun ImportReviewSheet(
                                         put("decision", decision.status)
                                         put("runnerOverlapFraction", decision.runnerOverlapFraction?.toDouble() ?: JSONObject.NULL)
                                         put("runnerIsSamePhysicalBlock", decision.runnerIsSamePhysicalBlock ?: JSONObject.NULL)
+                                        put("shadowOcr", decision.shadowOcr?.let { shadow -> JSONObject().apply {
+                                            put("scoredCount", shadow.scoredCount)
+                                            put("best", shadow.best?.let { best -> JSONObject().apply {
+                                                put("physicalBlockIndex", best.physicalBlockIndex ?: JSONObject.NULL)
+                                                put("verticalDecile", best.verticalDecile)
+                                                put("adjustedScore", best.adjustedScore.toDouble())
+                                                put("positiveScore", best.positiveScore.toDouble())
+                                                put("confuserScore", best.confuserScore.toDouble())
+                                            } } ?: JSONObject.NULL)
+                                            put("scoredByBlock", JSONObject().apply {
+                                                shadow.scoredByBlock.forEach { (block, count) -> put(block.toString(), count) }
+                                            })
+                                        } } ?: JSONObject.NULL)
                                         put("candidatePipeline", decision.pipeline?.let { pipe -> JSONObject().apply {
                                             put("strictCount", pipe.strictCount)
                                             put("looseObserved", pipe.looseObserved)

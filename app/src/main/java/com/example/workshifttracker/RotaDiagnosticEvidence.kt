@@ -171,6 +171,34 @@ internal object RotaDiagnosticEvidence {
         }
     }
 
+    /** Shadow OCR crops are scored separately; never used in production matching. */
+    data class ShadowScore(
+        val physicalBlockIndex: Int?, val verticalDecile: Int,
+        val adjustedScore: Float, val positiveScore: Float, val confuserScore: Float
+    ) {
+        init {
+            require(physicalBlockIndex == null || physicalBlockIndex >= 0)
+            require(verticalDecile in 0..9)
+            require(listOf(adjustedScore, positiveScore, confuserScore).all { it in 0f..1f })
+        }
+    }
+
+    data class ShadowOcrEvidence(
+        val scoredCount: Int,
+        val best: ShadowScore?,
+        val scoredByBlock: Map<Int, Int>
+    )
+
+    fun shadowEvidence(rows: List<ShadowScore>): ShadowOcrEvidence {
+        val best = rows.sortedWith(compareByDescending<ShadowScore> { it.adjustedScore }
+            .thenByDescending { it.positiveScore }
+            .thenBy { it.physicalBlockIndex ?: Int.MAX_VALUE }
+            .thenBy { it.verticalDecile }).firstOrNull()
+        return ShadowOcrEvidence(rows.size, best,
+            rows.filter { it.physicalBlockIndex != null }
+                .groupingBy { it.physicalBlockIndex!! }.eachCount().toSortedMap())
+    }
+
     data class ProfileDecision(
         val weekdayColumn: Int,
         val candidateCount: Int,
@@ -184,7 +212,8 @@ internal object RotaDiagnosticEvidence {
         val runnerOverlapFraction: Float? = null,
         val runnerIsSamePhysicalBlock: Boolean? = null,
         val candidateSources: List<CandidateSourceEvidence> = emptyList(),
-        val pipeline: CandidatePipeline? = null
+        val pipeline: CandidatePipeline? = null,
+        val shadowOcr: ShadowOcrEvidence? = null
     )
 
     /** Candidate overlap is computed locally; exact image coordinates are never exported. */

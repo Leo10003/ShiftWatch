@@ -1,0 +1,158 @@
+{
+  "schemaVersion": 1,
+  "kind": "sanitized-diagnostic-baseline-not-ocr-replay",
+  "photoCase": "2026-09-07-reference",
+  "expectedByWeekday": {
+    "0": 0,
+    "1": 2,
+    "2": 2,
+    "3": 2,
+    "4": null,
+    "5": 2,
+    "6": 2
+  },
+  "baseline": [
+    {
+      "weekdayColumn": 0,
+      "decision": "accepted_normal",
+      "physicalBlockIndex": 0,
+      "topScore": 0.691782,
+      "candidateCount": 18,
+      "eligibleOcrTokens": 5,
+      "ocrMerged": 4,
+      "ocrAdded": 1,
+      "eligibleOcrTokensByBlock": {
+        "0": 2,
+        "1": 1,
+        "2": 1,
+        "3": 1
+      },
+      "ocrMergedByBlock": {
+        "0": 2,
+        "1": 1,
+        "2": 1
+      },
+      "ocrAddedByBlock": {
+        "3": 1
+      }
+    },
+    {
+      "weekdayColumn": 1,
+      "decision": "rejected_below_rescue_floor",
+      "physicalBlockIndex": 2,
+      "topScore": 0.447374,
+      "candidateCount": 27,
+      "eligibleOcrTokens": 4,
+      "ocrMerged": 3,
+      "ocrAdded": 1,
+      "eligibleOcrTokensByBlock": {
+        "0": 1,
+        "2": 2,
+        "3": 1
+      },
+      "ocrMergedByBlock": {
+        "0": 1,
+        "2": 2
+      },
+      "ocrAddedByBlock": {
+        "3": 1
+      }
+    },
+    {
+      "weekdayColumn": 2,
+      "decision": "accepted_normal",
+      "physicalBlockIndex": 2,
+      "topScore": 0.746834,
+      "candidateCount": 28,
+      "eligibleOcrTokens": 3,
+      "ocrMerged": 3,
+      "ocrAdded": 0,
+      "eligibleOcrTokensByBlock": {
+        "0": 2,
+        "2": 1
+      },
+      "ocrMergedByBlock": {
+        "0": 2,
+        "2": 1
+      },
+      "ocrAddedByBlock": {}
+    },
+    {
+      "weekdayColumn": 3,
+      "decision": "accepted_normal",
+      "physicalBlockIndex": 2,
+      "topScore": 0.735933,
+      "candidateCount": 25,
+      "eligibleOcrTokens": 9,
+      "ocrMerged": 2,
+      "ocrAdded": 7,
+      "eligibleOcrTokensByBlock": {
+        "0": 5,
+        "2": 4
+      },
+      "ocrMergedByBlock": {
+        "0": 1,
+        "2": 1
+      },
+      "ocrAddedByBlock": {
+        "0": 4,
+        "2": 3
+      }
+    },
+    {
+      "weekdayColumn": 4,
+      "decision": "rejected_below_rescue_floor",
+      "physicalBlockIndex": 3,
+      "topScore": 0.476201,
+      "candidateCount": 23,
+      "eligibleOcrTokens": 9,
+      "ocrMerged": 9,
+      "ocrAdded": 0,
+      "eligibleOcrTokensByBlock": {
+        "0": 6,
+        "2": 3
+      },
+      "ocrMergedByBlock": {
+        "0": 6,
+        "2": 3
+      },
+      "ocrAddedByBlock": {}
+    },
+    {
+      "weekdayColumn": 5,
+      "decision": "accepted_normal",
+      "physicalBlockIndex": 2,
+      "topScore": 0.730863,
+      "candidateCount": 26,
+      "eligibleOcrTokens": 5,
+      "ocrMerged": 5,
+      "ocrAdded": 0,
+      "eligibleOcrTokensByBlock": {
+        "0": 4,
+        "2": 1
+      },
+      "ocrMergedByBlock": {
+        "0": 4,
+        "2": 1
+      },
+      "ocrAddedByBlock": {}
+    },
+    {
+      "weekdayColumn": 6,
+      "decision": "accepted_normal",
+      "physicalBlockIndex": 2,
+      "topScore": 0.7087,
+      "candidateCount": 24,
+      "eligibleOcrTokens": 4,
+      "ocrMerged": 4,
+      "ocrAdded": 0,
+      "eligibleOcrTokensByBlock": {
+        "0": 4
+      },
+      "ocrMergedByBlock": {
+        "0": 4
+      },
+      "ocrAddedByBlock": {}
+    }
+  ]
+}

@@ -3,7 +3,7 @@ Fast, read-only checks before pushing a ShiftWatch change.
 Optional -Patch validates an external patch without applying it.
 Run from the existing repository root; does not alter user data or Git state.
 #>
-param([string]$Patch)
+param([string]$Patch, [switch]$Android, [string[]]$Diagnostics)
 $ErrorActionPreference = 'Stop'
 if (-not (Test-Path '.\app\build.gradle.kts') -or -not (Test-Path '.\tools\verify_regression_cases.py')) {
     throw 'Run this script from the ShiftWatch repository root.'
@@ -43,13 +43,37 @@ if (-not $pythonRunner -and (Get-Command python -ErrorAction SilentlyContinue)) 
 if ($pythonRunner -eq 'py') {
     & py -3 '.\tools\verify_regression_cases.py'
     if ($LASTEXITCODE -ne 0) { throw 'Regression metadata validation failed' }
+    & py -3 '.\tools\verify-recognition-baseline.py'
+    if ($LASTEXITCODE -ne 0) { throw 'Sanitized recognition baseline validation failed' }
     Write-Host 'PASS: regression metadata validation.'
 } elseif ($pythonRunner -eq 'python') {
     & python '.\tools\verify_regression_cases.py'
     if ($LASTEXITCODE -ne 0) { throw 'Regression metadata validation failed' }
+    & python '.\tools\verify-recognition-baseline.py'
+    if ($LASTEXITCODE -ne 0) { throw 'Sanitized recognition baseline validation failed' }
     Write-Host 'PASS: regression metadata validation.'
 } else {
     Write-Warning 'No working Python interpreter found; optional regression metadata validation skipped. CI will run it.'
 }
 Write-Host 'PASS: Git whitespace and PowerShell syntax checks.'
-Write-Host 'Full Kotlin compilation, Android unit tests and lint must still pass in GitHub Actions.'
+Write-Host 'Full Android compilation must pass in GitHub Actions unless independently built locally.'
+# The tracked fixture is metadata, NOT a replacement for photographs or image-based OCR tests.
+$fixture = Get-Content '.\test-data\recognition\v2088-sanitized-decision-baseline.json' -Raw | ConvertFrom-Json
+if ($fixture.baseline.Count -ne 7 -or
+    @($fixture.baseline | Where-Object { $_.decision -like 'accepted*' }).Count -ne 5 -or
+    @($fixture.baseline | Where-Object { $_.weekdayColumn -eq 4 -and $_.decision -like 'accepted*' }).Count -ne 0) {
+    throw 'Sanitized recognition baseline is invalid'
+}
+Write-Host 'PASS: sanitized reference metadata (5/6, Friday protected).'
+if ($Diagnostics.Count -gt 0) {
+    & "$PSScriptRoot\analyze-scans.ps1" -Paths $Diagnostics
+    if ($LASTEXITCODE -ne 0) { throw 'Diagnostic comparison failed' }
+}
+if ($Android) {
+    if (-not (Test-Path '.\gradlew.bat')) { throw 'Missing Gradle wrapper' }
+    & '.\gradlew.bat' --no-daemon :app:testDebugUnitTest :app:lintDebug
+    if ($LASTEXITCODE -ne 0) { throw 'Android checks failed' }
+    Write-Host 'PASS: local Android tests and lint.'
+} else {
+    Write-Host 'SKIP: optional Android Gradle tests. Pass -Android when SDK and JDK are installed.'
+}

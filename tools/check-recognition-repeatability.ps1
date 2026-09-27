@@ -64,6 +64,21 @@ foreach ($other in @($reports | Select-Object -Skip 1)) {
             Write-Host "  $($days[$day]) pipeline.ocrTokenDeciles: [$leftDeciles] -> [$rightDeciles]"
             $differences++
         }
+        # Compare experimental shadow evidence independently; never treat it as an accepted match.
+        if ($null -ne $a.shadowOcr -or $null -ne $b.shadowOcr) {
+            foreach ($field in @('scoredCount')) {
+                if ("$($a.shadowOcr.$field)" -cne "$($b.shadowOcr.$field)") {
+                    Write-Host "  $($days[$day]) shadowOcr.$($field): $($a.shadowOcr.$field) -> $($b.shadowOcr.$field)"
+                    $differences++
+                }
+            }
+            foreach ($field in @('physicalBlockIndex','verticalDecile','adjustedScore','positiveScore','confuserScore')) {
+                if ("$($a.shadowOcr.best.$field)" -cne "$($b.shadowOcr.best.$field)") {
+                    Write-Host "  $($days[$day]) shadowOcr.best.$($field): $($a.shadowOcr.best.$field) -> $($b.shadowOcr.best.$field)"
+                    $differences++
+                }
+            }
+        }
         $leftBlocks = $a.candidatePipeline.survivorsByBlock | ConvertTo-Json -Compress
         $rightBlocks = $b.candidatePipeline.survivorsByBlock | ConvertTo-Json -Compress
         if ($leftBlocks -cne $rightBlocks) {

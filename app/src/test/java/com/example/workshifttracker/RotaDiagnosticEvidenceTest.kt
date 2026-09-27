@@ -128,4 +128,23 @@ class RotaDiagnosticEvidenceTest {
             RotaDiagnosticEvidence.sourceEvidence(rows.reversed()))
     }
 
+    @Test fun shadowEvidenceIsDeterministicAndDoesNotClaimAcceptance() {
+        val first = RotaDiagnosticEvidence.ShadowScore(2, 7, 0.71f, 0.74f, 0.55f)
+        val second = RotaDiagnosticEvidence.ShadowScore(0, 2, 0.41f, 0.53f, 0.62f)
+        val a = RotaDiagnosticEvidence.shadowEvidence(listOf(first, second))
+        assertEquals(a, RotaDiagnosticEvidence.shadowEvidence(listOf(second, first)))
+        assertEquals(2, a.scoredCount)
+        assertEquals(mapOf(0 to 1, 2 to 1), a.scoredByBlock)
+        assertEquals(2, a.best?.physicalBlockIndex)
+        val decision = RotaDiagnosticEvidence.ProfileDecision(1, 27, 25, 0.447f, 0.404f,
+            0.55f, 0.58f, "rejected_below_rescue_floor", shadowOcr = a)
+        assertEquals("rejected_below_rescue_floor", decision.status)
+    }
+    @Test fun shadowEvidenceIsEmptyWhenNoOriginalMergeIsEligible() {
+        val result = RotaDiagnosticEvidence.shadowEvidence(emptyList())
+        assertEquals(0, result.scoredCount)
+        assertEquals(null, result.best)
+        assertTrue(result.scoredByBlock.isEmpty())
+    }
+
 }
