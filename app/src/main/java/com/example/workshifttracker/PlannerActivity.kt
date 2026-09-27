@@ -799,6 +799,7 @@ private fun ImportReviewSheet(
 
     var workingDrafts by remember(imageUri) { mutableStateOf(drafts) }
     var viewerMarkers by remember(imageUri) { mutableStateOf(RotaDiagnosticEvidence.MarkerSummary()) }
+    var viewerRecognitionCache by remember(imageUri) { mutableStateOf<RotaViewerRecognitionCache?>(null) }
     var selected by remember(imageUri) {
         mutableStateOf<Set<String>>(resumedSession?.selectedIds?.intersect(drafts.map { it.id }.toSet()).orEmpty())
     }
@@ -1015,8 +1016,8 @@ private fun ImportReviewSheet(
                     // Privacy by default: no name, photo, OCR text, exact dates or handwriting
                     // crops. Even the candidate IDs are replaced with local ordinal indices.
                     val result = JSONObject().apply {
-                        put("schemaVersion", 5)
-                        put("appVersion", "20.8.3")
+                        put("schemaVersion", 6)
+                        put("appVersion", "20.8.4")
                         put("sessionId", diagnosticSession)
                         put("captureUtc", java.time.Instant.now().toString())
                         put("scanInProgress", scanSnapshot)
@@ -1124,6 +1125,8 @@ private fun ImportReviewSheet(
                         put("viewerMarkers", JSONObject().apply {
                             put("ocrNameHitsByWeekdayColumn", JSONArray(markerSnapshot.ocrHitsByColumn))
                             put("savedProfileStatus", markerSnapshot.profileStatus)
+                            put("recognitionRunId", markerSnapshot.recognitionRunId ?: JSONObject.NULL)
+                            put("recognitionLifecycle", markerSnapshot.recognitionLifecycle)
                             put("seededSearchStatus", markerSnapshot.seededSearchStatus)
                             fun JSONArray.addDecisions(decisions: List<RotaDiagnosticEvidence.ProfileDecision>) {
                                 decisions.forEach { decision ->
@@ -1415,6 +1418,8 @@ private fun ImportReviewSheet(
                     assistData = currentAssistData,
                     onAssistDataChanged = { updated -> assistData = updated },
                     onMarkerSummary = { viewerMarkers = it },
+                    viewerRecognitionCache = viewerRecognitionCache,
+                    onViewerRecognitionCache = { viewerRecognitionCache = it },
                     selectedDrafts = workingDrafts,
                     onTap = { sourceX, sourceY ->
                         // Immediate interaction: do NOT run structural-time OCR on the touch thread.
@@ -1948,6 +1953,8 @@ private fun AssistedScheduleImage(
     assistData: ScheduleImporter.AssistData,
     onAssistDataChanged: (ScheduleImporter.AssistData) -> Unit,
     onMarkerSummary: (RotaDiagnosticEvidence.MarkerSummary) -> Unit,
+    viewerRecognitionCache: RotaViewerRecognitionCache?,
+    onViewerRecognitionCache: (RotaViewerRecognitionCache?) -> Unit,
     selectedDrafts: List<ScheduleImporter.Draft>,
     onTap: (Float, Float) -> ScheduleImporter.Draft?,
     onDeselect: (ScheduleImporter.Draft) -> Unit,
@@ -2089,6 +2096,8 @@ private fun AssistedScheduleImage(
                         assistData = assistData,
                         onAssistDataChanged = onAssistDataChanged,
                         onMarkerSummary = onMarkerSummary,
+                        viewerRecognitionCache = viewerRecognitionCache,
+                        onViewerRecognitionCache = onViewerRecognitionCache,
                         onTap = onTap,
                         onDeselect = onDeselect,
                         quickTimes = quickTimes,
@@ -2123,6 +2132,8 @@ private fun ZoomableRotaImage(
     assistData: ScheduleImporter.AssistData,
     onAssistDataChanged: (ScheduleImporter.AssistData) -> Unit,
     onMarkerSummary: (RotaDiagnosticEvidence.MarkerSummary) -> Unit,
+    viewerRecognitionCache: RotaViewerRecognitionCache?,
+    onViewerRecognitionCache: (RotaViewerRecognitionCache?) -> Unit,
     onTap: (Float, Float) -> ScheduleImporter.Draft?,
     onDeselect: (ScheduleImporter.Draft) -> Unit,
     quickTimes: List<LocalTime>,
@@ -2142,18 +2153,35 @@ private fun ZoomableRotaImage(
         val origin: String = "user_tap"
     )
 
+    val reusedCache = remember(rawBitmap) {
+        viewerRecognitionCache?.takeIf {
+            it.reusableFor(initialVisionProfile, assistData.ocrPasses, assistData.tokens.size, reviewOnly)
+        }
+    }
+    val startupVisionProfile = remember(rawBitmap) { initialVisionProfile }
+    val recognitionRunId = remember(rawBitmap) { reusedCache?.runId ?: UUID.randomUUID().toString() }
+    val recognitionState = if (reusedCache != null) "reused_completed" else "fresh_viewer_run"
+    val currentCacheCallback by rememberUpdatedState(onViewerRecognitionCache)
     var scale by remember { mutableFloatStateOf(1.0f) }
     var offset by remember { mutableStateOf(Offset.Zero) }
     var fitWidth by remember(rawBitmap) { mutableStateOf(false) }
     var viewportHeightPx by remember { mutableFloatStateOf(0f) }
     var viewportWidthPx by remember { mutableFloatStateOf(0f) }
-    var markers by remember(rawBitmap) { mutableStateOf<List<TapMarker>>(emptyList()) }
+    var markers by remember(rawBitmap) {
+        mutableStateOf(reusedCache?.availableSuggestions { suggestion ->
+            val column = ScheduleImporter.columnIndexForX(assistData, suggestion.x)
+            initialDrafts.any { draft ->
+                draft.columnIndex == column && draft.physicalBlockId != null &&
+                    draft.physicalBlockId == RotaGridModel.blockIndexForY(assistData, column, suggestion.y)
+            }
+        }?.map { TapMarker(it.x, it.y, null, it.score, it.origin) }.orEmpty())
+    }
     val currentMarkerCallback by rememberUpdatedState(onMarkerSummary)
-    var ocrHitCounts by remember(rawBitmap) { mutableStateOf(List(7) { 0 }) }
-    var profileColumnDecisions by remember(rawBitmap) { mutableStateOf<List<RotaDiagnosticEvidence.ProfileDecision>>(emptyList()) }
-    var profileTraceStatus by remember(rawBitmap) { mutableStateOf("not_attempted") }
-    var seededColumnDecisions by remember(rawBitmap) { mutableStateOf<List<RotaDiagnosticEvidence.ProfileDecision>>(emptyList()) }
-    var seededTraceStatus by remember(rawBitmap) { mutableStateOf("not_attempted") }
+    var ocrHitCounts by remember(rawBitmap) { mutableStateOf(reusedCache?.ocrHitsByColumn ?: List(7) { 0 }) }
+    var profileColumnDecisions by remember(rawBitmap) { mutableStateOf(reusedCache?.profileDecisions.orEmpty()) }
+    var profileTraceStatus by remember(rawBitmap) { mutableStateOf(reusedCache?.profileStatus ?: "not_attempted") }
+    var seededColumnDecisions by remember(rawBitmap) { mutableStateOf(reusedCache?.seededDecisions.orEmpty()) }
+    var seededTraceStatus by remember(rawBitmap) { mutableStateOf(reusedCache?.seededStatus ?: "not_attempted") }
     LaunchedEffect(markers, assistData, ocrHitCounts, profileColumnDecisions, profileTraceStatus, seededColumnDecisions, seededTraceStatus) {
         val suggestedByColumn = MutableList(7) { 0 }
         val confirmedByColumn = MutableList(7) { 0 }
@@ -2164,7 +2192,26 @@ private fun ZoomableRotaImage(
                 else confirmedByColumn[column]++
             }
         }
+        if (profileTraceStatus == "completed") {
+            currentCacheCallback(RotaViewerRecognitionCache(
+                runId = recognitionRunId,
+                profileFingerprint = startupVisionProfile?.hashCode(),
+                ocrPasses = assistData.ocrPasses,
+                tokenCount = assistData.tokens.size,
+                reviewOnly = reviewOnly,
+                suggestions = markers.filter { it.draft == null }.map {
+                    RotaViewerRecognitionCache.Suggestion(it.x, it.y, it.suggestionScore, it.origin)
+                },
+                ocrHitsByColumn = ocrHitCounts,
+                profileDecisions = profileColumnDecisions,
+                profileStatus = profileTraceStatus,
+                seededDecisions = seededColumnDecisions,
+                seededStatus = seededTraceStatus
+            ))
+        }
         currentMarkerCallback(RotaDiagnosticEvidence.MarkerSummary(
+            recognitionRunId = recognitionRunId,
+            recognitionLifecycle = recognitionState,
             viewerOpened = true,
             suggested = suggestedByColumn.sum(),
             confirmed = confirmedByColumn.sum(),
@@ -2196,7 +2243,6 @@ private fun ZoomableRotaImage(
     var lastInteractionMillis by remember { mutableLongStateOf(0L) }
     var showBlockDiagnostics by remember(rawBitmap) { mutableStateOf(false) }
     var visionMessage by remember { mutableStateOf("Analyzing name, table structure and shift times…") }
-    val startupVisionProfile = remember(rawBitmap) { initialVisionProfile }
     var currentVisionProfile by remember(rawBitmap) { mutableStateOf(initialVisionProfile) }
     LaunchedEffect(initialVisionProfile) { currentVisionProfile = initialVisionProfile }
     LaunchedEffect(initialDrafts) {
@@ -2208,7 +2254,7 @@ private fun ZoomableRotaImage(
             if (old == null) marker else latest[old.id]?.let { marker.copy(draft = it) }
         }
     }
-    var profileLoaded by remember(rawBitmap) { mutableStateOf(false) }
+    var profileLoaded by remember(rawBitmap) { mutableStateOf(reusedCache != null) }
     // Bound deep handwriting jobs to one CPU worker in this viewer. They must not compete
     // with Compose rendering or run simultaneously after repeated teaching taps.
     val visionDispatcher = remember(rawBitmap) { Dispatchers.Default.limitedParallelism(1) }

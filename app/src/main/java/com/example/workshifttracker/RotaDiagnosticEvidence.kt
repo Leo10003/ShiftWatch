@@ -11,6 +11,8 @@ import java.time.temporal.ChronoUnit
 internal object RotaDiagnosticEvidence {
     data class MarkerSummary(
         val viewerOpened: Boolean = false,
+        val recognitionRunId: String? = null,
+        val recognitionLifecycle: String = "not_started",
         val suggested: Int = 0,
         val confirmed: Int = 0,
         val suggestionsByColumn: List<Int> = List(7) { 0 },
