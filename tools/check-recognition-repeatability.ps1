@@ -33,6 +33,20 @@ $differences = 0
 $base = $reports[0]
 foreach ($other in @($reports | Select-Object -Skip 1)) {
     Write-Host "`nComparing $(Split-Path -Leaf $base.Path) against $(Split-Path -Leaf $other.Path)"
+    if ($base.Data.ocrGeometryFingerprint -and $other.Data.ocrGeometryFingerprint) {
+        if ($base.Data.ocrGeometryFingerprint -cne $other.Data.ocrGeometryFingerprint) {
+            Write-Host '  OCR geometry/layout fingerprint differs: upstream input drift'
+            foreach ($bucket in 0..6) {
+                if ($base.Data.ocrGeometryXBucketFingerprints[$bucket] -cne $other.Data.ocrGeometryXBucketFingerprints[$bucket]) {
+                    Write-Host "    Approximate x-bucket ${bucket}: geometry changed"
+                }
+            }
+        } else {
+            Write-Host '  OCR geometry/layout fingerprint matches; check recognition pipeline drift separately'
+        }
+    } else {
+        Write-Host '  OCR geometry comparison unavailable (requires schema 11)'
+    }
     foreach ($day in 0..6) {
         $a = @($base.Data.viewerMarkers.savedProfileDecisions | Where-Object { $_.weekdayColumn -eq $day }) | Select-Object -First 1
         $b = @($other.Data.viewerMarkers.savedProfileDecisions | Where-Object { $_.weekdayColumn -eq $day }) | Select-Object -First 1

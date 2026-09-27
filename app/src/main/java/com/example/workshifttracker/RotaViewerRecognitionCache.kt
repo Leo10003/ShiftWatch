@@ -10,6 +10,7 @@ internal data class RotaViewerRecognitionCache(
     val profileFingerprint: Int?,
     val ocrPasses: Int,
     val tokenCount: Int,
+    val inputFingerprint: String,
     val reviewOnly: Boolean,
     val suggestions: List<Suggestion>,
     val ocrHitsByColumn: List<Int>,
@@ -20,9 +21,9 @@ internal data class RotaViewerRecognitionCache(
 ) {
     data class Suggestion(val x: Float, val y: Float, val score: Float?, val origin: String)
 
-    fun reusableFor(profile: String?, passes: Int, tokens: Int, isReviewOnly: Boolean): Boolean =
+    fun reusableFor(profile: String?, input: String, isReviewOnly: Boolean): Boolean =
         profileStatus == "completed" && profileFingerprint == profile?.hashCode() &&
-            ocrPasses == passes && tokenCount == tokens && reviewOnly == isReviewOnly
+            inputFingerprint == input && reviewOnly == isReviewOnly
 
     /** Preserve manually selected/removed shifts instead of resurrecting overlapping suggestions. */
     fun availableSuggestions(blocked: (Suggestion) -> Boolean): List<Suggestion> = suggestions.filterNot(blocked)

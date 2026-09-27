@@ -2,11 +2,19 @@
 param([Parameter(Mandatory=$true)][string]$Patch,[switch]$Apply)
 $ErrorActionPreference = 'Stop'
 if (-not (Test-Path '.\app\build.gradle.kts')) { throw 'Run from ShiftWatch repository root' }
-$version = Get-Content '.\app\build.gradle.kts' -Raw
-if ($version -notmatch 'versionName\s*=\s*"20\.8\.8"') {
-    throw 'Expected committed v20.8.8 base version. No changes made.'
-}
 $path=(Resolve-Path -LiteralPath $Patch -ErrorAction Stop).Path
+# Derive the required base release from the patch, not from the installer's own version.
+# That permits safe future upgrades using the same script without changing it each release.
+$patchText = Get-Content -LiteralPath $path -Raw
+$baseVersion = [regex]::Match($patchText, '(?m)^\-\s*versionName\s*=\s*"([^"]+)"').Groups[1].Value
+if (-not $baseVersion) {
+    throw 'Patch does not declare an expected base version; review it and use git apply --check manually.'
+}
+$current = Get-Content '.\app\build.gradle.kts' -Raw
+$declaredVersion = [regex]::Match($current, 'versionName\s*=\s*"([^"]+)"').Groups[1].Value
+if ($declaredVersion -cne $baseVersion) {
+    throw "Expected committed v$baseVersion base, found v$declaredVersion. No changes made."
+}
 $changes=@(& git status --porcelain)
 if ($LASTEXITCODE -ne 0) { throw 'git status failed' }
 if ($changes.Count -gt 0) { Write-Host ($changes -join "`n"); throw 'Dirty repository: commit, stash or review local changes first; nothing applied' }

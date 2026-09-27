@@ -33,7 +33,25 @@ foreach ($r in $reports) {
     if ($null -ne $reference -and $snapshot -cne $reference) { $drift++ }
     if ($null -eq $reference) { $reference=$snapshot }
 }
-$lines += '', "Decision/pipeline drift against first scan: $drift comparison(s)", "Duration spread: $([math]::Round(($maxMs-$minMs)/1000,1))s", '', '## Weekday identity evidence', '', '| Day | Expected block | Decisions / top scores | Shadow OCR best (experimental only) |', '|---|---:|---|---|'
+$geometryStatus = 'Unavailable (requires schema 11 exports)'
+if (@($reports | Where-Object { -not $_.ocrGeometryFingerprint }).Count -eq 0) {
+    $fingerprints = @($reports | ForEach-Object { $_.ocrGeometryFingerprint } | Select-Object -Unique)
+    if ($fingerprints.Count -eq 1) {
+        $geometryStatus = 'Geometry inputs match; inspect OCR text, grouping or scorer if decisions drift'
+    } else {
+        $geometryStatus = 'Geometry inputs DIFFER; compare the per-x-bucket fingerprints below'
+    }
+}
+$lines += '', "Decision/pipeline drift against first scan: $drift comparison(s)", "OCR geometry: $geometryStatus", "Duration spread: $([math]::Round(($maxMs-$minMs)/1000,1))s"
+if ($geometryStatus -like '*DIFFER*') {
+    $lines += '', '## OCR geometry fingerprints by x-bucket (approximate, not weekdays)', ''
+    foreach ($i in 0..6) {
+        $codes = @($reports | ForEach-Object { $_.ocrGeometryXBucketFingerprints[$i] })
+        $status = if (@($codes | Select-Object -Unique).Count -eq 1) { 'same' } else { 'CHANGED' }
+        $lines += "- Bucket ${i}: $status"
+    }
+}
+$lines += '', '## Weekday identity evidence' , '', '| Day | Expected block | Decisions / top scores | Shadow OCR best (experimental only) |', '|---|---:|---|---|'
 foreach($i in 0..6) {
     $cell=@(); $shadow=@()
     foreach($r in $reports) {

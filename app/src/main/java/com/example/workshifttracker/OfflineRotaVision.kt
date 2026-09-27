@@ -145,7 +145,7 @@ internal object OfflineRotaVision {
     private val shadowOcrCache = WeakHashMap<Bitmap, MutableMap<String, List<Candidate>>>()
 
     private fun candidateKey(assist: ScheduleImporter.AssistData, column: Int, left: Int, right: Int): String =
-        "${System.identityHashCode(assist)}:$column:$left:$right:${assist.tokens.size}"
+        "${RotaRecognitionInputKey.full(assist)}:$column:$left:$right"
 
     @Synchronized
     private fun cachedCandidateTrace(bitmap: Bitmap, assist: ScheduleImporter.AssistData,

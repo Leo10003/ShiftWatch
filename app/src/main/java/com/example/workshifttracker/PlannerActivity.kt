@@ -1024,7 +1024,7 @@ private fun ImportReviewSheet(
                     // Privacy by default: no name, photo, OCR text, exact dates or handwriting
                     // crops. Even the candidate IDs are replaced with local ordinal indices.
                     val result = JSONObject().apply {
-                        put("schemaVersion", 10)
+                        put("schemaVersion", 11)
                         put("appVersion", installedAppVersion)
                         put("sessionId", diagnosticSession)
                         put("captureUtc", java.time.Instant.now().toString())
@@ -1044,6 +1044,10 @@ private fun ImportReviewSheet(
                             put("displayedWeekOffsetDaysFromPlannerFallback", displayedWeekOffsetSnapshot)
                         })
                         if (dataSnapshot != null) {
+                            // Geometry-only: never export a hash of OCR words or employee names.
+                            put("ocrGeometryFingerprint", RotaRecognitionInputKey.geometry(dataSnapshot))
+                            put("ocrGeometryXBucketFingerprints", JSONArray(
+                                RotaRecognitionInputKey.geometryByXBucket(dataSnapshot)))
                             put("layout", JSONObject().apply {
                                 put("imageWidth", dataSnapshot.imageWidth)
                                 put("imageHeight", dataSnapshot.imageHeight)
@@ -1532,6 +1536,8 @@ private fun ImportReviewSheet(
                     sourceWidth = currentAssistData.imageWidth,
                     sourceHeight = currentAssistData.imageHeight,
                     assistData = currentAssistData,
+                    backgroundScanRunning = scanning,
+                    finalBackgroundAssist = initialAssistData,
                     onAssistDataChanged = { updated -> assistData = updated },
                     onMarkerSummary = { viewerMarkers = it },
                     viewerRecognitionCache = viewerRecognitionCache,
@@ -2067,6 +2073,8 @@ private fun AssistedScheduleImage(
     sourceWidth: Int,
     sourceHeight: Int,
     assistData: ScheduleImporter.AssistData,
+    backgroundScanRunning: Boolean,
+    finalBackgroundAssist: ScheduleImporter.AssistData?,
     onAssistDataChanged: (ScheduleImporter.AssistData) -> Unit,
     onMarkerSummary: (RotaDiagnosticEvidence.MarkerSummary) -> Unit,
     viewerRecognitionCache: RotaViewerRecognitionCache?,
@@ -2091,6 +2099,15 @@ private fun AssistedScheduleImage(
     // The original automatic full-screen dialog covered the review sheet as soon as analysis
     // began, effectively hiding manual controls for minutes. Only open it on an explicit tap.
     var fullScreen by remember(bitmap) { mutableStateOf(false) }
+    var waitedForFinalScan by remember(bitmap) { mutableStateOf(false) }
+    var finalAssistSynchronized by remember(bitmap) { mutableStateOf(false) }
+    LaunchedEffect(backgroundScanRunning, assistData, finalBackgroundAssist) {
+        if (!backgroundScanRunning && assistData == finalBackgroundAssist) {
+            finalAssistSynchronized = true
+        }
+    }
+    val awaitingFinalInputs = RotaRecognitionInputKey.viewerShouldWait(
+        backgroundScanRunning, finalAssistSynchronized)
 
     ElevatedCard(
         shape = RoundedCornerShape(24.dp),
@@ -2177,6 +2194,9 @@ private fun AssistedScheduleImage(
         }
     }
 
+    LaunchedEffect(fullScreen, backgroundScanRunning) {
+        if (fullScreen && awaitingFinalInputs) waitedForFinalScan = true
+    }
     if (fullScreen) {
         Dialog(
             onDismissRequest = { fullScreen = false },
@@ -2203,7 +2223,20 @@ private fun AssistedScheduleImage(
                         }
                         TextButton(onClick = { fullScreen = false }) { Text("Done") }
                     }
-                    ZoomableRotaImage(
+                    if (awaitingFinalInputs) {
+                        // Background OCR owns the scan. Preview is available immediately, but
+                        // launching saved-profile recognition on provisional tokens causes races.
+                        Column(Modifier.fillMaxWidth().weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Image(image, "Rota preview while OCR completes",
+                                Modifier.fillMaxWidth().weight(1f), contentScale = ContentScale.Fit)
+                            LinearProgressIndicator(Modifier.fillMaxWidth())
+                            Text("Finishing the background scan before handwriting matching. " +
+                                "Your existing selections remain available in the review.",
+                                style = MaterialTheme.typography.bodyMedium)
+                        }
+                    } else ZoomableRotaImage(
+                        waitedForFinalScan = waitedForFinalScan,
                         store = store,
                         image = image,
                         rawBitmap = bitmap,
@@ -2240,6 +2273,7 @@ private fun AssistedScheduleImage(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ZoomableRotaImage(
+    waitedForFinalScan: Boolean,
     store: ShiftStore,
     image: androidx.compose.ui.graphics.ImageBitmap,
     rawBitmap: Bitmap,
@@ -2269,14 +2303,19 @@ private fun ZoomableRotaImage(
         val origin: String = "user_tap"
     )
 
-    val reusedCache = remember(rawBitmap) {
+    val inputFingerprint = remember(assistData) { RotaRecognitionInputKey.full(assistData) }
+    val reusedCache = remember(rawBitmap, inputFingerprint, initialVisionProfile, reviewOnly) {
         viewerRecognitionCache?.takeIf {
-            it.reusableFor(initialVisionProfile, assistData.ocrPasses, assistData.tokens.size, reviewOnly)
+            it.reusableFor(initialVisionProfile, inputFingerprint, reviewOnly)
         }
     }
     val startupVisionProfile = remember(rawBitmap) { initialVisionProfile }
-    val recognitionRunId = remember(rawBitmap) { reusedCache?.runId ?: UUID.randomUUID().toString() }
-    val recognitionState = if (reusedCache != null) "reused_completed" else "fresh_viewer_run"
+    val recognitionRunId = remember(rawBitmap, inputFingerprint) { reusedCache?.runId ?: UUID.randomUUID().toString() }
+    val recognitionState = when {
+        reusedCache != null -> "reused_completed"
+        waitedForFinalScan -> "waited_for_final_scan"
+        else -> "fresh_final_scan"
+    }
     val currentCacheCallback by rememberUpdatedState(onViewerRecognitionCache)
     var scale by remember { mutableFloatStateOf(1.0f) }
     var offset by remember { mutableStateOf(Offset.Zero) }
@@ -2314,6 +2353,7 @@ private fun ZoomableRotaImage(
                 profileFingerprint = startupVisionProfile?.hashCode(),
                 ocrPasses = assistData.ocrPasses,
                 tokenCount = assistData.tokens.size,
+                inputFingerprint = inputFingerprint,
                 reviewOnly = reviewOnly,
                 suggestions = markers.filter { it.draft == null }.map {
                     RotaViewerRecognitionCache.Suggestion(it.x, it.y, it.suggestionScore, it.origin)

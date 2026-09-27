@@ -8,7 +8,7 @@ import org.junit.Test
 class RotaViewerRecognitionCacheTest {
     private fun completedCache(): RotaViewerRecognitionCache = RotaViewerRecognitionCache(
         runId = "run-1", profileFingerprint = "training-set".hashCode(),
-        ocrPasses = 3, tokenCount = 207, reviewOnly = false,
+        ocrPasses = 3, tokenCount = 207, inputFingerprint = "input-A", reviewOnly = false,
         suggestions = listOf(
             RotaViewerRecognitionCache.Suggestion(10f, 100f, .7f, "saved_profile"),
             RotaViewerRecognitionCache.Suggestion(30f, 200f, .8f, "saved_profile")
@@ -24,18 +24,18 @@ class RotaViewerRecognitionCacheTest {
 
     @Test fun reopenedViewerReusesCompletedRecognitionWithUnchangedInputs() {
         val cache = completedCache()
-        assertTrue(cache.reusableFor("training-set", 3, 207, false))
+        assertTrue(cache.reusableFor("training-set", "input-A", false))
         assertEquals("run-1", cache.runId)
         assertEquals(.447f, cache.profileDecisions.single().bestScore ?: 0f, .001f)
     }
 
     @Test fun changedProfileOrOcrInputsMustNotReuseStaleMarkers() {
         val cache = completedCache()
-        assertFalse(cache.reusableFor("new-training", 3, 207, false))
-        assertFalse(cache.reusableFor("training-set", 2, 207, false))
-        assertFalse(cache.reusableFor("training-set", 3, 208, false))
-        assertFalse(cache.reusableFor("training-set", 3, 207, true))
-        assertFalse(cache.copy(profileStatus = "failed").reusableFor("training-set", 3, 207, false))
+        assertFalse(cache.reusableFor("new-training", "input-A", false))
+        assertFalse(cache.reusableFor("training-set", "input-B", false))
+        assertFalse(cache.reusableFor("training-set", "input-C", false))
+        assertFalse(cache.reusableFor("training-set", "input-A", true))
+        assertFalse(cache.copy(profileStatus = "failed").reusableFor("training-set", "input-A", false))
     }
 
     @Test fun manuallySelectedLocationIsNotReintroducedAsAnAutomaticSuggestion() {
