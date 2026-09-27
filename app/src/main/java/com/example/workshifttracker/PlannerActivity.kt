@@ -1024,7 +1024,7 @@ private fun ImportReviewSheet(
                     // Privacy by default: no name, photo, OCR text, exact dates or handwriting
                     // crops. Even the candidate IDs are replaced with local ordinal indices.
                     val result = JSONObject().apply {
-                        put("schemaVersion", 8)
+                        put("schemaVersion", 9)
                         put("appVersion", installedAppVersion)
                         put("sessionId", diagnosticSession)
                         put("captureUtc", java.time.Instant.now().toString())
@@ -1168,6 +1168,15 @@ private fun ImportReviewSheet(
                                             put("survivorsByBlock", JSONObject().apply {
                                                 pipe.survivorsByBlock.forEach { (block, count) -> put(block.toString(), count) }
                                             })
+                                            put("eligibleOcrTokensByBlock", JSONObject().apply {
+                                                pipe.eligibleOcrTokensByBlock.forEach { (block, count) -> put(block.toString(), count) }
+                                            })
+                                            put("ocrMergedByBlock", JSONObject().apply {
+                                                pipe.ocrMergedByBlock.forEach { (block, count) -> put(block.toString(), count) }
+                                            })
+                                            put("ocrAddedByBlock", JSONObject().apply {
+                                                pipe.ocrAddedByBlock.forEach { (block, count) -> put(block.toString(), count) }
+                                            })
                                         } } ?: JSONObject.NULL)
                                         put("candidateSources", JSONArray().apply {
                                             decision.candidateSources.forEach { source ->
@@ -1232,6 +1241,15 @@ private fun ImportReviewSheet(
                                             put("finalOcrCandidates", pipe.finalOcrCandidates)
                                             put("survivorsByBlock", JSONObject().apply {
                                                 pipe.survivorsByBlock.forEach { (block, count) -> put(block.toString(), count) }
+                                            })
+                                            put("eligibleOcrTokensByBlock", JSONObject().apply {
+                                                pipe.eligibleOcrTokensByBlock.forEach { (block, count) -> put(block.toString(), count) }
+                                            })
+                                            put("ocrMergedByBlock", JSONObject().apply {
+                                                pipe.ocrMergedByBlock.forEach { (block, count) -> put(block.toString(), count) }
+                                            })
+                                            put("ocrAddedByBlock", JSONObject().apply {
+                                                pipe.ocrAddedByBlock.forEach { (block, count) -> put(block.toString(), count) }
                                             })
                                         } } ?: JSONObject.NULL)
                                         put("candidateSources", JSONArray().apply {

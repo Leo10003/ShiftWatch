@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "caseId": "reference-september-07-2026-v2087",
+  "privacy": "synthetic-or-anonymized",
+  "description": "Manual ground truth and observed v20.8.7 recognition of the same rota image. Dates/times are user-confirmed, not read from diagnostic exports.",
+  "expectedWeekStart": "2026-09-07",
+  "expectedByWeekday": {
+    "0": {
+      "working": true,
+      "start": "09:30",
+      "block": 0
+    },
+    "1": {
+      "working": true,
+      "start": "16:00",
+      "block": 2
+    },
+    "2": {
+      "working": true,
+      "start": "16:00",
+      "block": 2
+    },
+    "3": {
+      "working": true,
+      "start": "16:00",
+      "block": 2
+    },
+    "4": {
+      "working": false
+    },
+    "5": {
+      "working": true,
+      "start": "16:00",
+      "block": 2
+    },
+    "6": {
+      "working": true,
+      "start": "16:00",
+      "block": 2
+    }
+  },
+  "baseline": {
+    "appVersion": "20.8.7",
+    "expectedMatches": 5,
+    "expectedMisses": [
+      1
+    ],
+    "expectedNoFalseMatches": [
+      4
+    ],
+    "stableFound": [
+      0,
+      2,
+      3,
+      5,
+      6
+    ]
+  },
+  "note": "Physical-block detection and confirmed start-time extraction are different tasks. Avoid treating weak solver proposals as correct time predictions."
+}

@@ -871,11 +871,18 @@ internal object OfflineRotaVision {
         // candidate crops when a photograph is scanned repeatedly.
         var tokensMerged = 0
         var tokensAdded = 0
+        val eligibleTokensByBlock = sortedMapOf<Int, Int>()
+        val ocrMergedByBlock = sortedMapOf<Int, Int>()
+        val ocrAddedByBlock = sortedMapOf<Int, Int>()
         val tokenDeciles = MutableList(10) { 0 }
         columnTokens.sortedWith(compareBy<ScheduleImporter.AssistToken> { it.top }
             .thenBy { it.left }.thenBy { it.bottom }.thenBy { it.right }
             .thenBy { it.source.ordinal }.thenBy { it.text }).forEach { token ->
             tokenDeciles[RotaDiagnosticEvidence.verticalDecile(token.cy, assist.imageHeight.toFloat())]++
+            val tokenBlock = RotaGridModel.blockIndexForY(assist, column, token.cy)
+            if (tokenBlock != null && tokenBlock >= 0) {
+                eligibleTokensByBlock[tokenBlock] = (eligibleTokensByBlock[tokenBlock] ?: 0) + 1
+            }
             val top = (token.top * sy).toInt().coerceIn(0, bitmap.height - 2)
             val bottom = (token.bottom * sy).toInt().coerceIn(top + 1, bitmap.height - 1)
             val candidate = Candidate(Band(top, bottom), token.text)
@@ -883,6 +890,9 @@ internal object OfflineRotaVision {
             if (nearestIndex != null && abs(bands[nearestIndex].band.center - candidate.band.center) <= max(10f, bitmap.height * 0.010f)) {
                 val old = bands[nearestIndex]
                 tokensMerged++
+                if (tokenBlock != null && tokenBlock >= 0) {
+                    ocrMergedByBlock[tokenBlock] = (ocrMergedByBlock[tokenBlock] ?: 0) + 1
+                }
                 bands[nearestIndex] = Candidate(
                     Band(min(old.band.top, top), max(old.band.bottom, bottom)),
                     betterOcrText(old.ocrText, token.text)
@@ -890,6 +900,9 @@ internal object OfflineRotaVision {
             } else {
                 bands += candidate
                 tokensAdded++
+                if (tokenBlock != null && tokenBlock >= 0) {
+                    ocrAddedByBlock[tokenBlock] = (ocrAddedByBlock[tokenBlock] ?: 0) + 1
+                }
             }
         }
         val sourceBodyTop = assist.imageHeight * 0.125f
@@ -947,7 +960,10 @@ internal object OfflineRotaVision {
             rejectedBody = validHeights.size - survivors.size,
             finalCandidates = survivors.size,
             finalOcrCandidates = survivors.count { it.ocrText != null },
-            survivorsByBlock = byBlock
+            survivorsByBlock = byBlock,
+            eligibleOcrTokensByBlock = eligibleTokensByBlock,
+            ocrMergedByBlock = ocrMergedByBlock,
+            ocrAddedByBlock = ocrAddedByBlock
         )
         return survivors to trace
     }

@@ -140,7 +140,10 @@ internal object RotaDiagnosticEvidence {
         val rejectedBody: Int,
         val finalCandidates: Int,
         val finalOcrCandidates: Int,
-        val survivorsByBlock: Map<Int, Int>
+        val survivorsByBlock: Map<Int, Int>,
+        val eligibleOcrTokensByBlock: Map<Int, Int> = emptyMap(),
+        val ocrMergedByBlock: Map<Int, Int> = emptyMap(),
+        val ocrAddedByBlock: Map<Int, Int> = emptyMap()
     ) {
         init {
             require(ocrTokenDeciles.size == 10 && ocrTokenDeciles.all { it >= 0 })
@@ -155,6 +158,16 @@ internal object RotaDiagnosticEvidence {
             require(finalOcrCandidates <= finalCandidates)
             require(survivorsByBlock.keys.all { it >= 0 } && survivorsByBlock.values.all { it >= 0 })
             require(survivorsByBlock.values.sum() <= finalCandidates)
+            require(listOf(eligibleOcrTokensByBlock, ocrMergedByBlock, ocrAddedByBlock).all { map ->
+                map.keys.all { it >= 0 } && map.values.all { it >= 0 }
+            })
+            require(eligibleOcrTokensByBlock.values.sum() <= eligibleOcrTokens)
+            require(ocrMergedByBlock.values.sum() <= ocrMerged)
+            require(ocrAddedByBlock.values.sum() <= ocrAdded)
+            require((ocrMergedByBlock.keys + ocrAddedByBlock.keys).all { block ->
+                (ocrMergedByBlock[block] ?: 0) + (ocrAddedByBlock[block] ?: 0) <=
+                    (eligibleOcrTokensByBlock[block] ?: 0)
+            })
         }
     }
 

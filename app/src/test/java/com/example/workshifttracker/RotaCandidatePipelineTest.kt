@@ -44,4 +44,23 @@ class RotaCandidatePipelineTest {
         val names = RotaDiagnosticEvidence.CandidatePipeline::class.java.declaredFields.map { it.name }
         assertTrue(names.none { it.contains("text", ignoreCase = true) || it.contains("coordinate", ignoreCase = true) })
     }
+    @Test fun aggregateOcrBlockProvenanceRemainsConsistent() {
+        val trace = example().copy(
+            eligibleOcrTokensByBlock = mapOf(0 to 1, 2 to 4),
+            ocrMergedByBlock = mapOf(0 to 1, 2 to 3),
+            ocrAddedByBlock = mapOf(2 to 1)
+        )
+        assertEquals(4, trace.eligibleOcrTokensByBlock.getValue(2))
+        assertEquals(4, trace.ocrMergedByBlock.values.sum())
+        assertEquals(1, trace.ocrAddedByBlock.values.sum())
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun impossibleBlockLevelOcrAccountingIsRejected() {
+        example().copy(
+            eligibleOcrTokensByBlock = mapOf(2 to 1),
+            ocrMergedByBlock = mapOf(2 to 2)
+        )
+    }
+
 }
