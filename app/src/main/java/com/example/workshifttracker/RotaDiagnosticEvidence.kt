@@ -71,12 +71,18 @@ internal object RotaDiagnosticEvidence {
         val verticalDecile: Int,
         val adjustedScore: Float,
         val positiveScore: Float,
-        val confuserScore: Float
+        val confuserScore: Float,
+        val rawSeparation: Float = 0f,
+        val confuserPenalty: Float = 0f,
+        val separationAdjustment: Float = 0f,
+        val candidateOrigin: String = "unknown"
     ) {
         init {
             require(rank in 1..3 && verticalDecile in 0..9)
             require(physicalBlockIndex == null || physicalBlockIndex >= 0)
             require(adjustedScore in 0f..1f && positiveScore in 0f..1f && confuserScore in 0f..1f)
+            require(rawSeparation in -1f..1f && confuserPenalty in 0f..1f)
+            require(separationAdjustment in -1f..1f)
         }
     }
 
@@ -89,8 +95,17 @@ internal object RotaDiagnosticEvidence {
         val acceptanceFloor: Float?,
         val confuserScore: Float?,
         val status: String,
-        val rankedCandidates: List<RankedProfileCandidate> = emptyList()
+        val rankedCandidates: List<RankedProfileCandidate> = emptyList(),
+        val runnerOverlapFraction: Float? = null,
+        val runnerIsSamePhysicalBlock: Boolean? = null
     )
+
+    /** Candidate overlap is computed locally; exact image coordinates are never exported. */
+    fun bandOverlapFraction(aTop: Int, aBottom: Int, bTop: Int, bBottom: Int): Float {
+        val intersection = (minOf(aBottom, bBottom) - maxOf(aTop, bTop) + 1).coerceAtLeast(0)
+        val shortest = minOf(aBottom - aTop + 1, bBottom - bTop + 1)
+        return if (shortest <= 0) 0f else (intersection.toFloat() / shortest).coerceIn(0f, 1f)
+    }
 
     /** Derive stable, coarse image-position buckets without revealing exact image coordinates. */
     fun verticalDecile(imageY: Float, imageHeight: Float): Int =

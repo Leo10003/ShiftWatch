@@ -81,4 +81,26 @@ class RotaDiagnosticEvidenceTest {
         assertEquals("rejected_below_rescue_floor", decision.status)
     }
 
+    @Test fun bandOverlapDoesNotCountUnrelatedLinesAsTheSameOccurrence() {
+        assertEquals(0f, RotaDiagnosticEvidence.bandOverlapFraction(10, 20, 30, 40), 0.001f)
+        assertEquals(1f, RotaDiagnosticEvidence.bandOverlapFraction(10, 20, 10, 20), 0.001f)
+        assertEquals(6f / 11f, RotaDiagnosticEvidence.bandOverlapFraction(10, 20, 15, 25), 0.001f)
+        assertEquals(0f, RotaDiagnosticEvidence.bandOverlapFraction(10, 8, 10, 20), 0.001f)
+    }
+
+    @Test fun rankedDiagnosticsSeparateRawIdentityEvidenceFromPenalties() {
+        val top = RotaDiagnosticEvidence.RankedProfileCandidate(1, 2, 7,
+            0.543f, 0.753f, 0.60f, rawSeparation = 0.153f,
+            confuserPenalty = 0.09f, separationAdjustment = -0.12f,
+            candidateOrigin = "ocr_token_band")
+        val decision = RotaDiagnosticEvidence.ProfileDecision(3, 25, 25,
+            0.543f, 0.525f, 0.55f, 0.60f,
+            "rejected_insufficient_runner_margin", listOf(top),
+            runnerOverlapFraction = 0.82f, runnerIsSamePhysicalBlock = true)
+        assertEquals("ocr_token_band", decision.rankedCandidates.first().candidateOrigin)
+        assertEquals(0.153f, decision.rankedCandidates.first().rawSeparation, 0.001f)
+        assertEquals(0.82f, decision.runnerOverlapFraction ?: 0f, 0.001f)
+        assertTrue(decision.runnerIsSamePhysicalBlock == true)
+    }
+
 }

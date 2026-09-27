@@ -371,7 +371,9 @@ internal object OfflineRotaVision {
         var scanned = 0
         val matches = mutableListOf<Match>()
         data class Ranked(val candidate: Candidate, val score: Float, val positive: Float,
-                          val negative: Float, val separation: Float)
+                          val negative: Float, val separation: Float,
+                          val rawSeparation: Float, val confuserPenalty: Float,
+                          val separationAdjustment: Float)
         data class Deferred(
             val column: Int,
             val x: Float,
@@ -400,17 +402,29 @@ internal object OfflineRotaVision {
                 var score = (strongest * 0.46f + median * 0.29f + average * 0.21f + weakest * 0.04f).coerceIn(0f, 1f)
                 val positive = score
                 var negative = 0f
+                var confuserPenalty = 0f
+                var separationAdjustment = 0f
+                var rawSeparation = 0f
                 if (model.negatives.isNotEmpty()) {
                     val negativeScores = model.negatives.map { similarity(it, sig) }.sortedDescending()
                     negative = negativeScores.take(3).average().toFloat()
                     val separation = score - negative
+                    rawSeparation = separation
                     val boundary = RotaIdentityPolicy.boundary(profiles.size, model.negatives.size, negative)
-                    score -= boundary.confuserPenalty
-                    if (separation < boundary.requiredSeparation) score -= 0.12f
-                    else if (separation > boundary.requiredSeparation + 0.13f) score += 0.025f
+                    confuserPenalty = boundary.confuserPenalty
+                    score -= confuserPenalty
+                    if (separation < boundary.requiredSeparation) {
+                        separationAdjustment = -0.12f
+                        score += separationAdjustment
+                    } else if (separation > boundary.requiredSeparation + 0.13f) {
+                        separationAdjustment = 0.025f
+                        score += separationAdjustment
+                    }
                 }
-                Ranked(candidate, score.coerceIn(0f, 1f), positive, negative, score - negative)
-            }.sortedByDescending { it.score }
+                Ranked(candidate, score.coerceIn(0f, 1f), positive, negative, score - negative,
+                    rawSeparation, confuserPenalty, separationAdjustment)
+            }.sortedWith(compareByDescending<Ranked> { it.score }
+                .thenBy { it.candidate.band.top }.thenBy { it.candidate.band.bottom })
             val best = ranked.firstOrNull()
             if (best == null) {
                 decisions[column] = RotaDiagnosticEvidence.ProfileDecision(column, candidates.size, 0, null, null, null, null,
@@ -418,6 +432,15 @@ internal object OfflineRotaVision {
                 continue
             }
             val runner = ranked.getOrNull(1)?.score ?: 0f
+            val runnerCandidate = ranked.getOrNull(1)
+            val runnerOverlap = runnerCandidate?.let {
+                RotaDiagnosticEvidence.bandOverlapFraction(best.candidate.band.top, best.candidate.band.bottom,
+                    it.candidate.band.top, it.candidate.band.bottom)
+            }
+            val runnerSameBlock = runnerCandidate?.let {
+                RotaGridModel.blockIndexForY(assist, column, best.candidate.band.center / sy) ==
+                    RotaGridModel.blockIndexForY(assist, column, it.candidate.band.center / sy)
+            }
             val profilePairScores = mutableListOf<Float>()
             for (i in profiles.indices) for (j in i + 1 until profiles.size) profilePairScores += similarity(profiles[i], profiles[j])
             val consistency = profilePairScores.takeIf { it.isNotEmpty() }?.average()?.toFloat() ?: 0.78f
@@ -454,9 +477,13 @@ internal object OfflineRotaVision {
                         verticalDecile = RotaDiagnosticEvidence.verticalDecile(documentY, assist.imageHeight.toFloat()),
                         adjustedScore = item.score,
                         positiveScore = item.positive,
-                        confuserScore = item.negative
+                        confuserScore = item.negative,
+                        rawSeparation = item.rawSeparation,
+                        confuserPenalty = item.confuserPenalty,
+                        separationAdjustment = item.separationAdjustment,
+                        candidateOrigin = if (item.candidate.ocrText == null) "ink_gap_probe" else "ocr_token_band"
                     )
-                })
+                }, runnerOverlapFraction = runnerOverlap, runnerIsSamePhysicalBlock = runnerSameBlock)
             if (normalAccept || rescueAccept) {
                 matches += Match(
                     x = (sourceLeft + sourceRight) / 2f,

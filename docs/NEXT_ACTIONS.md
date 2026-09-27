@@ -14,3 +14,6 @@ Next steps after the new sanitized JSON export:
 ## v20.8.1 source patch handoff
 
 Apply the v20.8.1 patch on top of a clean v20.8 checkout. Verify GitHub Actions assembly, unit tests and lint. Import the same image on the same profile; explicitly select actual week 2026-09-07; open viewer and export diagnostic JSON **before** manually marking missing Thursday. Inspect saved-profile and seeded-search decisions for weekday 3, marker block provenance, header fallback-versus-displayed matching counts and per-block time candidate input trace. Do not change identity/time thresholds without source evidence. See CHANGELOG_V20_8_1.md.
+
+## v20.8.3 handoff
+Inspect schema 5 `viewerMarkers.savedProfileDecisions` for Tuesday/Thursday/Saturday: `runnerOverlapFraction`, `runnerIsSamePhysicalBlock`, and the top three `rawSeparation`, `confuserPenalty`, `separationAdjustment`, `candidateOrigin` fields. Only consider candidate de-duplication if overlapped bands demonstrably represent the same writing; do not lower global recognition thresholds from these reports alone. Repeat with unchanged photo and saved profile; export after opening viewer. Continue header and time investigations separately.
