@@ -140,6 +140,35 @@ class RotaDiagnosticEvidenceTest {
             0.55f, 0.58f, "rejected_below_rescue_floor", shadowOcr = a)
         assertEquals("rejected_below_rescue_floor", decision.status)
     }
+    @Test fun blockScoresRetainLosingPhysicalBlockAndAreOrderInvariant() {
+        fun row(block: Int, decile: Int, score: Float, origin: String) =
+            RotaDiagnosticEvidence.RankedProfileCandidate(1, block, decile, score,
+                score, 0.50f, candidateOrigin = origin)
+        val input = listOf(row(0, 1, .70f, "ocr_token_band"),
+            row(2, 6, .54f, "ink_gap_probe"), row(2, 7, .525f, "ocr_token_band"),
+            row(0, 2, .35f, "ink_gap_probe"))
+        val report = RotaDiagnosticEvidence.blockScoreEvidence(input)
+        assertEquals(report, RotaDiagnosticEvidence.blockScoreEvidence(input.reversed()))
+        assertEquals(listOf(0, 2), report.map { it.physicalBlockIndex })
+        assertEquals(2, report[1].candidateCount)
+        assertEquals(.54f, report[1].best.adjustedScore, .001f)
+        assertEquals(.525f, report[1].runner!!.adjustedScore, .001f)
+        assertEquals(.015f, report[1].scoreMargin ?: 0f, .001f)
+    }
+
+    @Test fun blockScoresDoNotModifyAcceptanceOrProfileDecision() {
+        val row = RotaDiagnosticEvidence.RankedProfileCandidate(1, 2, 6,
+            .54f, .75f, .73f, candidateOrigin = "ink_gap_probe")
+        val evidence = RotaDiagnosticEvidence.blockScoreEvidence(listOf(row))
+        val decision = RotaDiagnosticEvidence.ProfileDecision(3, 23, 23,
+            .543f, .525f, .55f, .73f, "rejected_insufficient_runner_margin",
+            productionByBlock = evidence)
+        assertEquals("rejected_insufficient_runner_margin", decision.status)
+        assertEquals(1, evidence.single().candidateCount)
+        assertEquals(null, evidence.single().runner)
+        assertEquals(null, evidence.single().scoreMargin)
+    }
+
     @Test fun shadowEvidenceIsEmptyWhenNoOriginalMergeIsEligible() {
         val result = RotaDiagnosticEvidence.shadowEvidence(emptyList())
         assertEquals(0, result.scoredCount)

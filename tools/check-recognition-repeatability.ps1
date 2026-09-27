@@ -93,6 +93,17 @@ foreach ($other in @($reports | Select-Object -Skip 1)) {
                 }
             }
         }
+        # Schema 12: per-block diagnostic drift can occur even when the winning candidate is unchanged.
+        if ([int]$base.Data.schemaVersion -ge 12 -and [int]$other.Data.schemaVersion -ge 12) {
+            foreach ($field in @('productionByBlock','shadowByBlock')) {
+                $leftEvidence = $a.$field | ConvertTo-Json -Compress -Depth 10
+                $rightEvidence = $b.$field | ConvertTo-Json -Compress -Depth 10
+                if ($leftEvidence -cne $rightEvidence) {
+                    Write-Host "  $($days[$day]) $($field) differs (inspect unified report)"
+                    $differences++
+                }
+            }
+        }
         $leftBlocks = $a.candidatePipeline.survivorsByBlock | ConvertTo-Json -Compress
         $rightBlocks = $b.candidatePipeline.survivorsByBlock | ConvertTo-Json -Compress
         if ($leftBlocks -cne $rightBlocks) {

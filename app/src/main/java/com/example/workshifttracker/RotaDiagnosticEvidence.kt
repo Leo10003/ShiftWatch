@@ -199,6 +199,31 @@ internal object RotaDiagnosticEvidence {
                 .groupingBy { it.physicalBlockIndex!! }.eachCount().toSortedMap())
     }
 
+    /** Summary of the best two scored crops inside each physical block, regardless of overall rank.
+     * Diagnostic only: these rows cannot alter the matcher or generate shift suggestions.
+     */
+    data class BlockScoreEvidence(
+        val physicalBlockIndex: Int,
+        val candidateCount: Int,
+        val best: RankedProfileCandidate,
+        val runner: RankedProfileCandidate?,
+        val scoreMargin: Float?
+    )
+
+    fun blockScoreEvidence(rows: List<RankedProfileCandidate>): List<BlockScoreEvidence> =
+        rows.filter { it.physicalBlockIndex != null }
+            .groupBy { it.physicalBlockIndex!! }.toSortedMap().map { (block, candidates) ->
+                val ordered = candidates.sortedWith(
+                    compareByDescending<RankedProfileCandidate> { it.adjustedScore }
+                        .thenByDescending { it.positiveScore }
+                        .thenBy { it.verticalDecile }.thenBy { it.candidateOrigin }
+                        .thenBy { it.confuserScore }
+                )
+                val runner = ordered.getOrNull(1)
+                BlockScoreEvidence(block, ordered.size, ordered[0].copy(rank = 1),
+                    runner?.copy(rank = 2), runner?.let { ordered[0].adjustedScore - it.adjustedScore })
+            }
+
     data class ProfileDecision(
         val weekdayColumn: Int,
         val candidateCount: Int,
@@ -213,7 +238,9 @@ internal object RotaDiagnosticEvidence {
         val runnerIsSamePhysicalBlock: Boolean? = null,
         val candidateSources: List<CandidateSourceEvidence> = emptyList(),
         val pipeline: CandidatePipeline? = null,
-        val shadowOcr: ShadowOcrEvidence? = null
+        val shadowOcr: ShadowOcrEvidence? = null,
+        val productionByBlock: List<BlockScoreEvidence> = emptyList(),
+        val shadowByBlock: List<BlockScoreEvidence> = emptyList()
     )
 
     /** Candidate overlap is computed locally; exact image coordinates are never exported. */

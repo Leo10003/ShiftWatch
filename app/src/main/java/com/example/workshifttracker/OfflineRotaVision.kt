@@ -449,14 +449,29 @@ internal object OfflineRotaVision {
                     RotaDiagnosticEvidence.verticalDecile(documentY, assist.imageHeight.toFloat()),
                     item.score, item.positive, item.negative)
             })
+            fun evidenceRow(item: Ranked): RotaDiagnosticEvidence.RankedProfileCandidate {
+                val documentY = item.candidate.band.center / sy
+                return RotaDiagnosticEvidence.RankedProfileCandidate(
+                    rank = 1,
+                    physicalBlockIndex = RotaGridModel.blockIndexForY(assist, column, documentY),
+                    verticalDecile = RotaDiagnosticEvidence.verticalDecile(documentY, assist.imageHeight.toFloat()),
+                    adjustedScore = item.score, positiveScore = item.positive, confuserScore = item.negative,
+                    rawSeparation = item.rawSeparation, confuserPenalty = item.confuserPenalty,
+                    separationAdjustment = item.separationAdjustment,
+                    candidateOrigin = if (item.candidate.ocrText == null) "ink_gap_probe" else "ocr_token_band"
+                )
+            }
+            val shadowByBlock = RotaDiagnosticEvidence.blockScoreEvidence(shadows.map(::evidenceRow))
             val ranked = candidates.mapNotNull(::scoreCandidate).sortedWith(compareByDescending<Ranked> { it.score }
                 .thenBy { it.candidate.band.top }.thenBy { it.candidate.band.bottom })
+            val productionByBlock = RotaDiagnosticEvidence.blockScoreEvidence(ranked.map(::evidenceRow))
             val best = ranked.firstOrNull()
             if (best == null) {
                 decisions[column] = RotaDiagnosticEvidence.ProfileDecision(column, candidates.size, 0, null, null, null, null,
                     if (candidates.isEmpty()) "no_candidate_lines" else "no_usable_signatures",
                     pipeline = cachedCandidateTrace(bitmap, assist, column, left, right),
-                    shadowOcr = shadowEvidence)
+                    shadowOcr = shadowEvidence, productionByBlock = productionByBlock,
+                    shadowByBlock = shadowByBlock)
                 continue
             }
             val runner = ranked.getOrNull(1)?.score ?: 0f
@@ -514,6 +529,7 @@ internal object OfflineRotaVision {
                 }, runnerOverlapFraction = runnerOverlap, runnerIsSamePhysicalBlock = runnerSameBlock,
                 pipeline = cachedCandidateTrace(bitmap, assist, column, left, right),
                 shadowOcr = shadowEvidence,
+                productionByBlock = productionByBlock, shadowByBlock = shadowByBlock,
                 candidateSources = RotaDiagnosticEvidence.sourceEvidence(ranked.map { item ->
                     val documentY = item.candidate.band.center / sy
                     val origin = if (item.candidate.ocrText == null) "ink_gap_probe" else "ocr_token_band"

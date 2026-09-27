@@ -1024,7 +1024,7 @@ private fun ImportReviewSheet(
                     // Privacy by default: no name, photo, OCR text, exact dates or handwriting
                     // crops. Even the candidate IDs are replaced with local ordinal indices.
                     val result = JSONObject().apply {
-                        put("schemaVersion", 11)
+                        put("schemaVersion", 12)
                         put("appVersion", installedAppVersion)
                         put("sessionId", diagnosticSession)
                         put("captureUtc", java.time.Instant.now().toString())
@@ -1207,6 +1207,29 @@ private fun ImportReviewSheet(
                                                 })
                                             }
                                         })
+                                        fun JSONArray.addBlockEvidence(rows: List<RotaDiagnosticEvidence.BlockScoreEvidence>) {
+                                            rows.forEach { block ->
+                                                fun scoreJson(row: RotaDiagnosticEvidence.RankedProfileCandidate) = JSONObject().apply {
+                                                    put("verticalDecile", row.verticalDecile)
+                                                    put("adjustedScore", row.adjustedScore.toDouble())
+                                                    put("positiveScore", row.positiveScore.toDouble())
+                                                    put("confuserScore", row.confuserScore.toDouble())
+                                                    put("rawSeparation", row.rawSeparation.toDouble())
+                                                    put("confuserPenalty", row.confuserPenalty.toDouble())
+                                                    put("separationAdjustment", row.separationAdjustment.toDouble())
+                                                    put("candidateOrigin", row.candidateOrigin)
+                                                }
+                                                put(JSONObject().apply {
+                                                    put("physicalBlockIndex", block.physicalBlockIndex)
+                                                    put("candidateCount", block.candidateCount)
+                                                    put("best", scoreJson(block.best))
+                                                    put("runner", block.runner?.let(::scoreJson) ?: JSONObject.NULL)
+                                                    put("scoreMargin", block.scoreMargin?.toDouble() ?: JSONObject.NULL)
+                                                })
+                                            }
+                                        }
+                                        put("productionByBlock", JSONArray().apply { addBlockEvidence(decision.productionByBlock) })
+                                        put("shadowByBlock", JSONArray().apply { addBlockEvidence(decision.shadowByBlock) })
                                         put("topCandidates", JSONArray().apply {
                                             decision.rankedCandidates.forEach { candidate ->
                                                 put(JSONObject().apply {
@@ -1294,6 +1317,29 @@ private fun ImportReviewSheet(
                                                 })
                                             }
                                         })
+                                        fun JSONArray.addBlockEvidence(rows: List<RotaDiagnosticEvidence.BlockScoreEvidence>) {
+                                            rows.forEach { block ->
+                                                fun scoreJson(row: RotaDiagnosticEvidence.RankedProfileCandidate) = JSONObject().apply {
+                                                    put("verticalDecile", row.verticalDecile)
+                                                    put("adjustedScore", row.adjustedScore.toDouble())
+                                                    put("positiveScore", row.positiveScore.toDouble())
+                                                    put("confuserScore", row.confuserScore.toDouble())
+                                                    put("rawSeparation", row.rawSeparation.toDouble())
+                                                    put("confuserPenalty", row.confuserPenalty.toDouble())
+                                                    put("separationAdjustment", row.separationAdjustment.toDouble())
+                                                    put("candidateOrigin", row.candidateOrigin)
+                                                }
+                                                put(JSONObject().apply {
+                                                    put("physicalBlockIndex", block.physicalBlockIndex)
+                                                    put("candidateCount", block.candidateCount)
+                                                    put("best", scoreJson(block.best))
+                                                    put("runner", block.runner?.let(::scoreJson) ?: JSONObject.NULL)
+                                                    put("scoreMargin", block.scoreMargin?.toDouble() ?: JSONObject.NULL)
+                                                })
+                                            }
+                                        }
+                                        put("productionByBlock", JSONArray().apply { addBlockEvidence(decision.productionByBlock) })
+                                        put("shadowByBlock", JSONArray().apply { addBlockEvidence(decision.shadowByBlock) })
                                         put("topCandidates", JSONArray().apply {
                                             decision.rankedCandidates.forEach { candidate ->
                                                 put(JSONObject().apply {

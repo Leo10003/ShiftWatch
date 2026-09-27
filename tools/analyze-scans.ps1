@@ -29,7 +29,7 @@ foreach ($r in $reports) {
         elseif ($accepted -and $block -eq $baselineBlocks[$day]) { $hits++ }
     }
     $lines += "- $($r.appVersion): $hits/6 location hits, $fp false suggestions, scan ${seconds}s"
-    $snapshot=($row | ForEach-Object { "$( $_.weekdayColumn):$($_.decision):$($_.topScore):$($_.candidatePipeline | ConvertTo-Json -Compress -Depth 10)" }) -join '\n'
+    $snapshot=($row | ForEach-Object { "$( $_.weekdayColumn):$($_.decision):$($_.topScore):$($_.candidatePipeline | ConvertTo-Json -Compress -Depth 10):$($_.productionByBlock | ConvertTo-Json -Compress -Depth 10):$($_.shadowByBlock | ConvertTo-Json -Compress -Depth 10)" }) -join '\n'
     if ($null -ne $reference -and $snapshot -cne $reference) { $drift++ }
     if ($null -eq $reference) { $reference=$snapshot }
 }
@@ -69,6 +69,25 @@ foreach ($r in $reports) {
     $p=$t.candidatePipeline
     $added=if($p.ocrAddedByBlock.'2'){$p.ocrAddedByBlock.'2'}else{0}
     $lines += "- eligible in block 2: $($p.eligibleOcrTokensByBlock.'2'); merged: $($p.ocrMergedByBlock.'2'); added: $added; shadow originals scored: $($t.shadowOcr.scoredCount)"
+}
+$lines += '', '## Thursday and Saturday block-level scoring (diagnostic only)', '',
+    'These best/runner pairs are selected **inside** each physical block. They may not appear among the overall top three.',
+    '', '| Scan | Day | Block 2 production best / runner / margin | Block 2 shadow best |', '|---|---|---|---|'
+foreach($r in $reports) {
+    foreach($day in @(3,5)) {
+        $d=@($r.viewerMarkers.savedProfileDecisions | Where-Object { [int]$_.weekdayColumn -eq $day })[0]
+        $prod=@($d.productionByBlock | Where-Object { [int]$_.physicalBlockIndex -eq 2 })
+        $shadow=@($d.shadowByBlock | Where-Object { [int]$_.physicalBlockIndex -eq 2 })
+        if ($prod.Count -gt 0) {
+            $item=$prod[0]
+            $runnerText=if ($null -ne $item.runner) { [math]::Round([double]$item.runner.adjustedScore,3) } else { 'none' }
+            $marginText=if ($null -ne $item.scoreMargin) { [math]::Round([double]$item.scoreMargin,3) } else { 'n/a' }
+            $production="$([math]::Round([double]$item.best.adjustedScore,3)) ($($item.best.candidateOrigin)) / $runnerText / $marginText ($($item.candidateCount) scored)"
+        } else { $production='unavailable (requires schema 12)' }
+        if ($shadow.Count -gt 0) { $shadowText="$([math]::Round([double]$shadow[0].best.adjustedScore,3)) ($($shadow[0].candidateCount) scored)" }
+        else { $shadowText='none or unavailable' }
+        $lines += "| $($r.sessionId.Substring(0,8)) | $($dayNames[$day]) | $production | $shadowText |"
+    }
 }
 $lines += '', 'Never interpret experimental shadow scores as accepted shift suggestions.'
 $report=$lines -join "`n"
