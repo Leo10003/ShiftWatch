@@ -483,7 +483,18 @@ internal object OfflineRotaVision {
                         separationAdjustment = item.separationAdjustment,
                         candidateOrigin = if (item.candidate.ocrText == null) "ink_gap_probe" else "ocr_token_band"
                     )
-                }, runnerOverlapFraction = runnerOverlap, runnerIsSamePhysicalBlock = runnerSameBlock)
+                }, runnerOverlapFraction = runnerOverlap, runnerIsSamePhysicalBlock = runnerSameBlock,
+                candidateSources = RotaDiagnosticEvidence.sourceEvidence(ranked.map { item ->
+                    val documentY = item.candidate.band.center / sy
+                    val origin = if (item.candidate.ocrText == null) "ink_gap_probe" else "ocr_token_band"
+                    origin to RotaDiagnosticEvidence.RankedProfileCandidate(
+                        rank = 1,
+                        physicalBlockIndex = RotaGridModel.blockIndexForY(assist, column, documentY),
+                        verticalDecile = RotaDiagnosticEvidence.verticalDecile(documentY, assist.imageHeight.toFloat()),
+                        adjustedScore = item.score, positiveScore = item.positive,
+                        confuserScore = item.negative
+                    )
+                }))
             if (normalAccept || rescueAccept) {
                 matches += Match(
                     x = (sourceLeft + sourceRight) / 2f,
@@ -835,7 +846,12 @@ internal object OfflineRotaVision {
                 token.text.count(Char::isDigit) <= 1 &&
                 !looksLikeScheduleMetadata(token.text)
         }
-        columnTokens.forEach { token ->
+        // OCR passes may return their word boxes in different orders. Since each token merges
+        // into the nearest band, canonical geometric ordering prevents input-order-dependent
+        // candidate crops when a photograph is scanned repeatedly.
+        columnTokens.sortedWith(compareBy<ScheduleImporter.AssistToken> { it.top }
+            .thenBy { it.left }.thenBy { it.bottom }.thenBy { it.right }
+            .thenBy { it.source.ordinal }.thenBy { it.text }).forEach { token ->
             val top = (token.top * sy).toInt().coerceIn(0, bitmap.height - 2)
             val bottom = (token.bottom * sy).toInt().coerceIn(top + 1, bitmap.height - 1)
             val candidate = Candidate(Band(top, bottom), token.text)
@@ -879,7 +895,8 @@ internal object OfflineRotaVision {
         }
 
         return bands
-            .sortedBy { it.band.top }
+            .sortedWith(compareBy<Candidate> { it.band.top }.thenBy { it.band.bottom }
+                .thenBy { if (it.ocrText == null) 1 else 0 }.thenBy { it.ocrText ?: "" })
             .filter { it.band.height in max(5, (bitmap.height * 0.0035f).toInt())..max(42, (bitmap.height * 0.075f).toInt()) }
             .filter { it.band.center in bitmapBodyTop..bitmapBodyBottom }
     }

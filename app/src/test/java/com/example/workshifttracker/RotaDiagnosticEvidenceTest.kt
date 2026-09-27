@@ -103,4 +103,29 @@ class RotaDiagnosticEvidenceTest {
         assertTrue(decision.runnerIsSamePhysicalBlock == true)
     }
 
+    @Test fun sourceEvidencePreservesLosingOcrAlternativeAndCounts() {
+        fun row(origin: String, adjusted: Float, positive: Float, block: Int) =
+            origin to RotaDiagnosticEvidence.RankedProfileCandidate(1, block, 7,
+                adjusted, positive, 0.60f, candidateOrigin = origin)
+        val evidence = RotaDiagnosticEvidence.sourceEvidence(listOf(
+            row("ink_gap_probe", 0.543f, 0.753f, 2),
+            row("ocr_token_band", 0.525f, 0.743f, 2),
+            row("ink_gap_probe", 0.440f, 0.56f, 0),
+            row("ocr_token_band", 0.401f, 0.52f, 1)
+        ))
+        assertEquals(listOf("ink_gap_probe", "ocr_token_band"), evidence.map { it.origin })
+        assertEquals(listOf(2, 2), evidence.map { it.scoredCount })
+        assertEquals(0.543f, evidence[0].strongestAdjustedScore, 0.001f)
+        assertEquals(0.743f, evidence[1].strongestPositiveScore, 0.001f)
+        assertEquals(2, evidence[1].strongestPhysicalBlockIndex)
+    }
+
+    @Test fun sourceEvidenceIsIndependentOfCandidateInputOrder() {
+        val a = RotaDiagnosticEvidence.RankedProfileCandidate(1, 2, 7, 0.5f, 0.7f, 0.6f)
+        val b = RotaDiagnosticEvidence.RankedProfileCandidate(1, 1, 4, 0.4f, 0.6f, 0.5f)
+        val rows = listOf("ocr_token_band" to a, "ink_gap_probe" to b)
+        assertEquals(RotaDiagnosticEvidence.sourceEvidence(rows),
+            RotaDiagnosticEvidence.sourceEvidence(rows.reversed()))
+    }
+
 }

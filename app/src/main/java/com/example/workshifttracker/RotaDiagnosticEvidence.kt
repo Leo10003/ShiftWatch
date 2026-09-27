@@ -88,6 +88,39 @@ internal object RotaDiagnosticEvidence {
         }
     }
 
+    /** One row per candidate source, including losing candidates outside the exported top three.
+     * These source summaries contain no OCR text or image coordinates.
+     */
+    data class CandidateSourceEvidence(
+        val origin: String,
+        val scoredCount: Int,
+        val strongestAdjustedScore: Float,
+        val strongestPositiveScore: Float,
+        val strongestConfuserScore: Float,
+        val strongestPhysicalBlockIndex: Int?
+    ) {
+        init {
+            require(scoredCount > 0)
+            require(strongestAdjustedScore in 0f..1f)
+            require(strongestPositiveScore in 0f..1f)
+            require(strongestConfuserScore in 0f..1f)
+            require(strongestPhysicalBlockIndex == null || strongestPhysicalBlockIndex >= 0)
+        }
+    }
+
+    /** Preserve both OCR and ink-probe alternatives even if only one reaches the top three. */
+    fun sourceEvidence(candidates: List<Pair<String, RankedProfileCandidate>>): List<CandidateSourceEvidence> =
+        candidates.groupBy { it.first }.toSortedMap().map { (origin, group) ->
+            val winner = group.map { it.second }.sortedWith(
+                compareByDescending<RankedProfileCandidate> { it.adjustedScore }
+                    .thenByDescending { it.positiveScore }
+                    .thenBy { it.physicalBlockIndex ?: Int.MAX_VALUE }
+                    .thenBy { it.verticalDecile }
+            ).first()
+            CandidateSourceEvidence(origin, group.size, winner.adjustedScore, winner.positiveScore,
+                winner.confuserScore, winner.physicalBlockIndex)
+        }
+
     data class ProfileDecision(
         val weekdayColumn: Int,
         val candidateCount: Int,
@@ -99,7 +132,8 @@ internal object RotaDiagnosticEvidence {
         val status: String,
         val rankedCandidates: List<RankedProfileCandidate> = emptyList(),
         val runnerOverlapFraction: Float? = null,
-        val runnerIsSamePhysicalBlock: Boolean? = null
+        val runnerIsSamePhysicalBlock: Boolean? = null,
+        val candidateSources: List<CandidateSourceEvidence> = emptyList()
     )
 
     /** Candidate overlap is computed locally; exact image coordinates are never exported. */

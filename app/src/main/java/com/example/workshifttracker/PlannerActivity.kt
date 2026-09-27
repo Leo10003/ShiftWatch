@@ -1016,8 +1016,8 @@ private fun ImportReviewSheet(
                     // Privacy by default: no name, photo, OCR text, exact dates or handwriting
                     // crops. Even the candidate IDs are replaced with local ordinal indices.
                     val result = JSONObject().apply {
-                        put("schemaVersion", 6)
-                        put("appVersion", "20.8.4")
+                        put("schemaVersion", 7)
+                        put("appVersion", "20.8.5")
                         put("sessionId", diagnosticSession)
                         put("captureUtc", java.time.Instant.now().toString())
                         put("scanInProgress", scanSnapshot)
@@ -1141,6 +1141,18 @@ private fun ImportReviewSheet(
                                         put("decision", decision.status)
                                         put("runnerOverlapFraction", decision.runnerOverlapFraction?.toDouble() ?: JSONObject.NULL)
                                         put("runnerIsSamePhysicalBlock", decision.runnerIsSamePhysicalBlock ?: JSONObject.NULL)
+                                        put("candidateSources", JSONArray().apply {
+                                            decision.candidateSources.forEach { source ->
+                                                put(JSONObject().apply {
+                                                    put("origin", source.origin)
+                                                    put("scoredCount", source.scoredCount)
+                                                    put("strongestAdjustedScore", source.strongestAdjustedScore.toDouble())
+                                                    put("strongestPositiveScore", source.strongestPositiveScore.toDouble())
+                                                    put("strongestConfuserScore", source.strongestConfuserScore.toDouble())
+                                                    put("strongestPhysicalBlockIndex", source.strongestPhysicalBlockIndex ?: JSONObject.NULL)
+                                                })
+                                            }
+                                        })
                                         put("topCandidates", JSONArray().apply {
                                             decision.rankedCandidates.forEach { candidate ->
                                                 put(JSONObject().apply {
@@ -1174,6 +1186,18 @@ private fun ImportReviewSheet(
                                         put("decision", decision.status)
                                         put("runnerOverlapFraction", decision.runnerOverlapFraction?.toDouble() ?: JSONObject.NULL)
                                         put("runnerIsSamePhysicalBlock", decision.runnerIsSamePhysicalBlock ?: JSONObject.NULL)
+                                        put("candidateSources", JSONArray().apply {
+                                            decision.candidateSources.forEach { source ->
+                                                put(JSONObject().apply {
+                                                    put("origin", source.origin)
+                                                    put("scoredCount", source.scoredCount)
+                                                    put("strongestAdjustedScore", source.strongestAdjustedScore.toDouble())
+                                                    put("strongestPositiveScore", source.strongestPositiveScore.toDouble())
+                                                    put("strongestConfuserScore", source.strongestConfuserScore.toDouble())
+                                                    put("strongestPhysicalBlockIndex", source.strongestPhysicalBlockIndex ?: JSONObject.NULL)
+                                                })
+                                            }
+                                        })
                                         put("topCandidates", JSONArray().apply {
                                             decision.rankedCandidates.forEach { candidate ->
                                                 put(JSONObject().apply {
