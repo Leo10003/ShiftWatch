@@ -1,3 +1,9 @@
+# v20.8 evidence update (2026-09-27)
+
+Source basis: v20.7.2 source, plus the user's subsequent CI log demonstrating Android assembly, unit tests and lint succeeded after the API-27 XML style fix (which is intentionally *not* overwritten by the v20.8 patch). New field diagnostic: 27,145ms scan; unresolved header fallback Sept 21 vs user-confirmed Sept 7; 5 visual name matches, Thursday missed; start times Mon 09:30, Tue/Wed/Thu/Sat/Sun 16:00, Friday absent. This diagnostic has no raw OCR tokens/photo and cannot verify the root cause directly. v20.8 adds structured evidence and viewer suggestion summaries. CI and real-device accuracy for v20.8 remain unverified until next build/scan. Continue with `CHANGELOG_V20_8.md` and `docs/NEXT_ACTIONS.md`.
+
+---
+
 # ShiftWatch permanent development memory
 
 ## Verified baseline

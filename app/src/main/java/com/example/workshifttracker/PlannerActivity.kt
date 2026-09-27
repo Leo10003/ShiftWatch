@@ -798,6 +798,7 @@ private fun ImportReviewSheet(
     }
 
     var workingDrafts by remember(imageUri) { mutableStateOf(drafts) }
+    var viewerMarkers by remember(imageUri) { mutableStateOf(RotaDiagnosticEvidence.MarkerSummary()) }
     var selected by remember(imageUri) {
         mutableStateOf<Set<String>>(resumedSession?.selectedIds?.intersect(drafts.map { it.id }.toSet()).orEmpty())
     }
@@ -832,6 +833,14 @@ private fun ImportReviewSheet(
         weekManuallyOverridden = true
         userRevision++
         assistMessage = "Confirmed ${rotaWeekStart.format(WEEK_DATE)} – ${rotaWeekStart.plusDays(6).format(WEEK_DATE)}. Individual shift times still require confirmation."
+    }
+
+    // A planner fallback is NOT a date recognized in the photograph. Require the user to
+    // actively choose its date before approving every shift; otherwise a tempting single
+    // button can confirm the wrong week (the Sept 21 vs Sept 7 field regression).
+    fun requestWeekConfirmation() {
+        if (weekResolution.authoritative) confirmDisplayedWeek()
+        else pickRotaWeek = true
     }
 
     fun evidenceFor(draft: ScheduleImporter.Draft, checked: Boolean = draft.id in selected): RotaReviewPolicy.Evidence {
@@ -991,6 +1000,12 @@ private fun ImportReviewSheet(
             val touchedSnapshot = manuallyChangedDays
             val resolutionSnapshot = weekResolution
             val scanSnapshot = scanning
+            val traceSnapshot = scanTrace
+            val markerSnapshot = viewerMarkers
+            val fallbackSnapshot = fallbackWeekStart
+            val textSnapshot = rawText
+            val manualWeekConfirmedSnapshot = weekManuallyOverridden
+            val displayedWeekOffsetSnapshot = java.time.temporal.ChronoUnit.DAYS.between(startOfWeek(fallbackWeekStart), rotaWeekStart)
             val elapsedSnapshot = scanElapsedMillis ?: if (scanStartElapsedMillis > 0L) {
                 SystemClock.elapsedRealtime() - scanStartElapsedMillis
             } else null
@@ -999,14 +1014,14 @@ private fun ImportReviewSheet(
                     // Privacy by default: no name, photo, OCR text, exact dates or handwriting
                     // crops. Even the candidate IDs are replaced with local ordinal indices.
                     val result = JSONObject().apply {
-                        put("schemaVersion", 1)
-                        put("appVersion", "20.7")
+                        put("schemaVersion", 2)
+                        put("appVersion", "20.8")
                         put("sessionId", diagnosticSession)
                         put("captureUtc", java.time.Instant.now().toString())
                         put("scanInProgress", scanSnapshot)
-                        put("scanStage", scanTrace.current)
+                        put("scanStage", traceSnapshot.current)
                         put("scanStageDurationsMs", JSONObject().apply {
-                            scanTrace.elapsed.forEach { (stage, duration) -> put(stage, duration) }
+                            traceSnapshot.elapsed.forEach { (stage, duration) -> put(stage, duration) }
                         })
                         put("scanElapsedMs", elapsedSnapshot ?: JSONObject.NULL)
                         put("privacy", "sanitized; no names/photos/raw OCR text")
@@ -1015,6 +1030,8 @@ private fun ImportReviewSheet(
                             put("authoritative", resolutionSnapshot.authoritative)
                             put("reason", resolutionSnapshot.reason)
                             put("manualReviewTouchedDays", touchedSnapshot.size)
+                            put("userConfirmedWeek", manualWeekConfirmedSnapshot)
+                            put("displayedWeekOffsetDaysFromPlannerFallback", displayedWeekOffsetSnapshot)
                         })
                         if (dataSnapshot != null) {
                             put("layout", JSONObject().apply {
@@ -1028,14 +1045,69 @@ private fun ImportReviewSheet(
                                 put("verticalGridRules", dataSnapshot.verticalRules.size)
                                 put("rowBoundaryCounts", JSONArray(dataSnapshot.rowBoundaries.map { it.size }))
                             })
-                            put("structuralTimeBands", JSONArray(ScheduleImporter.structuralTimeDiagnostics(dataSnapshot)))
+                            val structural = ScheduleImporter.structuredTimeDiagnostics(dataSnapshot)
+                            put("structuralTimeBands", JSONArray(structural.map { row ->
+                                "B${row.blockIndex + 1} ${row.time} · ${row.supportColumns}d/${row.atlasColumns}a · ${(row.confidence * 100).toInt()}% · ${if (row.ambiguous) "review" else "resolved"}"
+                            }))
+                            put("structuralTimeEvidence", JSONArray().apply {
+                                structural.forEach { band ->
+                                    put(JSONObject().apply {
+                                        put("physicalBlockIndex", band.blockIndex)
+                                        put("proposedTime", band.time.toString())
+                                        put("confidence", band.confidence.toDouble())
+                                        put("requiresReview", band.ambiguous)
+                                        put("distinctSupportColumns", band.supportColumns)
+                                        put("strongSupportColumns", band.strongColumns)
+                                        put("independentAtlasColumns", band.atlasColumns)
+                                        put("reason", band.reason)
+                                        put("alternatives", JSONArray().apply {
+                                            band.alternatives.forEach { alt ->
+                                                put(JSONObject().apply {
+                                                    put("time", alt.time.toString())
+                                                    put("score", alt.score.toDouble())
+                                                })
+                                            }
+                                        })
+                                    })
+                                }
+                            })
+                            put("dateHypotheses", JSONArray().apply {
+                                ScheduleImporter.diagnosticDateHypotheses(dataSnapshot, textSnapshot, fallbackSnapshot).forEach { h ->
+                                    put(JSONObject().apply {
+                                        put("source", h.source)
+                                        put("confidence", h.confidence.toDouble())
+                                        put("authoritative", h.authoritative)
+                                        put("evidenceCount", h.evidenceCount)
+                                        put("explicitCount", h.explicitCount)
+                                        put("reason", h.reason)
+                                        put("offsetDaysFromPlannerFallback", h.offsetDaysFromPlannerFallback)
+                                    })
+                                }
+                            })
                         }
+                        put("review", JSONObject().apply {
+                            put("draftCount", candidatesSnapshot.size)
+                            put("selectedCount", candidatesSnapshot.count { it.id in selectedSnapshot })
+                            put("note", "Review drafts and blue viewer suggestions have distinct identities and must not be treated as the same set")
+                        })
+                        put("viewerMarkers", JSONObject().apply {
+                            put("status", RotaDiagnosticEvidence.status(markerSnapshot))
+                            put("suggestedCount", markerSnapshot.suggested)
+                            put("confirmedCount", markerSnapshot.confirmed)
+                            put("suggestionsByWeekdayColumn", JSONArray(markerSnapshot.suggestionsByColumn))
+                            put("confirmedByWeekdayColumn", JSONArray(markerSnapshot.confirmedByColumn))
+                        })
                         put("candidates", JSONArray().apply {
                             candidatesSnapshot.forEachIndexed { index, d ->
                                 put(JSONObject().apply {
                                     put("index", index)
                                     put("weekday", d.start.dayOfWeek.name)
                                     put("origin", d.origin.name)
+                                    put("columnIndex", d.columnIndex ?: JSONObject.NULL)
+                                    put("physicalBlockIndex", d.physicalBlockId ?: JSONObject.NULL)
+                                    put("identityUserConfirmed", d.userConfirmedIdentity)
+                                    put("dateUserConfirmed", d.userConfirmedDate)
+                                    put("timeUserConfirmed", d.userConfirmedTime)
                                     put("selected", d.id in selectedSnapshot)
                                     put("verification", d.verificationState.name)
                                     put("requiresTimeConfirmation", d.requiresTimeConfirmation)
@@ -1046,10 +1118,17 @@ private fun ImportReviewSheet(
                             }
                         })
                     }
-                    context.contentResolver.openOutputStream(uri)?.use { out ->
-                        out.write(result.toString(2).toByteArray(Charsets.UTF_8))
+                    val stream = context.contentResolver.openOutputStream(uri)
+                        ?: error("The selected destination cannot be written")
+                    stream.use { out -> out.write(result.toString(2).toByteArray(Charsets.UTF_8)) }
+                    withContext(Dispatchers.Main) {
+                        assistMessage = "Exported ${candidatesSnapshot.size} review drafts and ${markerSnapshot.suggested} observed viewer suggestions."
                     }
-                } catch (_: Exception) { /* Export never blocks or damages review state. */ }
+                } catch (_: Exception) {
+                    withContext(Dispatchers.Main) {
+                        assistMessage = "Diagnostic export failed; please choose another location."
+                    }
+                }
             }
         }
     }
@@ -1176,8 +1255,8 @@ private fun ImportReviewSheet(
                     Column(horizontalAlignment = Alignment.End) {
                         if (!weekManuallyOverridden) {
                             TextButton(onClick = {
-                                confirmDisplayedWeek()
-                            }) { Text("Confirm week") }
+                                requestWeekConfirmation()
+                            }) { Text(if (weekResolution.authoritative) "Confirm week" else "Choose week") }
                         }
                         TextButton(onClick = { pickRotaWeek = true }) { Text("Change") }
                     }
@@ -1225,6 +1304,7 @@ private fun ImportReviewSheet(
                     sourceHeight = currentAssistData.imageHeight,
                     assistData = currentAssistData,
                     onAssistDataChanged = { updated -> assistData = updated },
+                    onMarkerSummary = { viewerMarkers = it },
                     selectedDrafts = workingDrafts,
                     onTap = { sourceX, sourceY ->
                         // Immediate interaction: do NOT run structural-time OCR on the touch thread.
@@ -1338,10 +1418,10 @@ private fun ImportReviewSheet(
                 if (!documentDateTrusted() && workingDrafts.any { it.columnIndex != null || !it.userConfirmedDate }) {
                     Surface(shape = RoundedCornerShape(18.dp), color = MaterialTheme.colorScheme.tertiaryContainer) {
                         Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Text("Confirm this rota week once", fontWeight = FontWeight.SemiBold)
-                            Text("${rotaWeekStart.format(WEEK_DATE)} – ${rotaWeekStart.plusDays(6).format(WEEK_DATE)}. This confirms dates only; uncertain times remain blocked.", style = MaterialTheme.typography.bodySmall)
+                            Text(if (weekResolution.authoritative) "Confirm this rota week once" else "Choose the correct rota week", fontWeight = FontWeight.SemiBold)
+                            Text("${rotaWeekStart.format(WEEK_DATE)} – ${rotaWeekStart.plusDays(6).format(WEEK_DATE)}. ${if (weekResolution.authoritative) "Verify these document dates." else "These dates came from a planner fallback, NOT the photograph. Select your actual rota week before importing."} Uncertain times remain blocked.", style = MaterialTheme.typography.bodySmall)
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Button(onClick = ::confirmDisplayedWeek) { Text("Confirm week") }
+                                Button(onClick = ::requestWeekConfirmation) { Text(if (weekResolution.authoritative) "Confirm week" else "Choose actual week") }
                                 TextButton(onClick = { pickRotaWeek = true }) { Text("Change dates") }
                             }
                         }
@@ -1513,10 +1593,10 @@ private fun ImportReviewSheet(
                 it.id in selected && !it.userConfirmedDate && !documentDateTrusted()
             }
             if (dateBlockedSelected) {
-                FilledTonalButton(onClick = ::confirmDisplayedWeek, modifier = Modifier.fillMaxWidth()) {
+                FilledTonalButton(onClick = ::requestWeekConfirmation, modifier = Modifier.fillMaxWidth()) {
                     Icon(Icons.Default.CalendarMonth, contentDescription = null)
                     Spacer(Modifier.width(8.dp))
-                    Text("CONFIRM WEEK ${rotaWeekStart.format(WEEK_DATE)}")
+                    Text(if (weekResolution.authoritative) "CONFIRM WEEK ${rotaWeekStart.format(WEEK_DATE)}" else "CHOOSE ACTUAL ROTA WEEK")
                 }
             }
             Button(
@@ -1757,6 +1837,7 @@ private fun AssistedScheduleImage(
     sourceHeight: Int,
     assistData: ScheduleImporter.AssistData,
     onAssistDataChanged: (ScheduleImporter.AssistData) -> Unit,
+    onMarkerSummary: (RotaDiagnosticEvidence.MarkerSummary) -> Unit,
     selectedDrafts: List<ScheduleImporter.Draft>,
     onTap: (Float, Float) -> ScheduleImporter.Draft?,
     onDeselect: (ScheduleImporter.Draft) -> Unit,
@@ -1897,6 +1978,7 @@ private fun AssistedScheduleImage(
                         sourceHeight = sourceHeight,
                         assistData = assistData,
                         onAssistDataChanged = onAssistDataChanged,
+                        onMarkerSummary = onMarkerSummary,
                         onTap = onTap,
                         onDeselect = onDeselect,
                         quickTimes = quickTimes,
@@ -1930,6 +2012,7 @@ private fun ZoomableRotaImage(
     sourceHeight: Int,
     assistData: ScheduleImporter.AssistData,
     onAssistDataChanged: (ScheduleImporter.AssistData) -> Unit,
+    onMarkerSummary: (RotaDiagnosticEvidence.MarkerSummary) -> Unit,
     onTap: (Float, Float) -> ScheduleImporter.Draft?,
     onDeselect: (ScheduleImporter.Draft) -> Unit,
     quickTimes: List<LocalTime>,
@@ -1954,6 +2037,25 @@ private fun ZoomableRotaImage(
     var viewportHeightPx by remember { mutableFloatStateOf(0f) }
     var viewportWidthPx by remember { mutableFloatStateOf(0f) }
     var markers by remember(rawBitmap) { mutableStateOf<List<TapMarker>>(emptyList()) }
+    val currentMarkerCallback by rememberUpdatedState(onMarkerSummary)
+    LaunchedEffect(markers, assistData) {
+        val suggestedByColumn = MutableList(7) { 0 }
+        val confirmedByColumn = MutableList(7) { 0 }
+        markers.forEach { marker ->
+            val column = ScheduleImporter.columnIndexForX(assistData, marker.x)
+            if (column in 0..6) {
+                if (marker.draft == null) suggestedByColumn[column]++
+                else confirmedByColumn[column]++
+            }
+        }
+        currentMarkerCallback(RotaDiagnosticEvidence.MarkerSummary(
+            viewerOpened = true,
+            suggested = suggestedByColumn.sum(),
+            confirmed = confirmedByColumn.sum(),
+            suggestionsByColumn = suggestedByColumn,
+            confirmedByColumn = confirmedByColumn
+        ))
+    }
     var pendingDraftId by remember { mutableStateOf<String?>(null) }
     var pendingHint by remember { mutableStateOf<String?>(null) }
     var showExactTimePicker by remember { mutableStateOf(false) }

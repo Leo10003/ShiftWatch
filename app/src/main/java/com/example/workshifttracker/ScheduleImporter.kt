@@ -1745,6 +1745,17 @@ object ScheduleImporter {
         return lines
     }
 
+    /**
+     * Structured per-block evidence for the opt-in sanitized JSON export. Unlike a textual
+     * status string it preserves independent supporting columns, atlas columns, abstention
+     * reasons and competing times. Times here are hypotheses, not confirmed employee shifts.
+     */
+    fun structuredTimeDiagnostics(assist: AssistData): List<RotaStructuralTimeEngine.Resolution> {
+        if (assist.imageWidth <= 0 || assist.imageHeight <= 0) return emptyList()
+        val geometry = columnGeometry(assist)
+        return structuralTimeModel(assist, geometry, collectAssistTimeCandidates(assist, geometry))
+    }
+
     private fun structuralTimeResolutionForTap(
         assist: AssistData,
         geometry: ColumnGeometry,
@@ -2476,6 +2487,40 @@ object ScheduleImporter {
                 reason = "planner fallback; document date evidence unresolved"
             )
         }
+    }
+
+    /**
+     * Diagnostic-only: expose independent date hypotheses without promoting an uncertain
+     * planner fallback to authoritative. Export only relative offsets and evidence counts.
+     * This is intentionally *not* another resolver or a source of draft dates.
+     */
+    internal fun diagnosticDateHypotheses(
+        assist: AssistData,
+        rawText: String,
+        fallbackWeekStart: LocalDate,
+        today: LocalDate = LocalDate.now()
+    ): List<RotaDiagnosticEvidence.DateHypothesis> {
+        val fallbackMonday = fallbackWeekStart.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
+        val height = assist.imageHeight.coerceAtLeast(1)
+        val headerBottom = headerDateZoneBottom(assist) / height.toFloat()
+        val tokens = assist.tokens.map { token ->
+            RotaDateAuthorityEngine.Token(token.text, columnIndexForX(assist, token.cx), token.cy / height.toFloat())
+        }
+        val focus = assist.tokens.filter { it.source == TokenSource.HEADER_FOCUS }.map { token ->
+            RotaDateAuthorityEngine.Token(token.text, columnIndexForX(assist, token.cx), token.cy / height.toFloat())
+        }
+        val geometry = RotaDateAuthorityEngine.resolve(tokens, today, fallbackMonday,
+            max(headerBottom, .255f), headerBottom)
+        val text = RotaDateAuthorityEngine.resolveTextSequence(rawText, today, fallbackMonday)
+        val header = RotaDateAuthorityEngine.resolve(focus, today, fallbackMonday,
+            max(headerBottom, .255f), headerBottom)
+        return listOf(
+            RotaDiagnosticEvidence.dateHypothesis("all_token_geometry", geometry, fallbackMonday),
+            RotaDiagnosticEvidence.dateHypothesis("ordered_ocr_text", text, fallbackMonday),
+            RotaDiagnosticEvidence.dateHypothesis("focused_header_only", header, fallbackMonday),
+            RotaDiagnosticEvidence.dateHypothesis("actual_review_resolution",
+                documentWeekResolution(assist, rawText, fallbackMonday, today), fallbackMonday)
+        )
     }
 
     /** Best on-device week estimate. The UI always allows the user to override this once. */

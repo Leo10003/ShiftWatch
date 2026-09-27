@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "caseId": "reference-september-07-2026",
+  "scenario": "User-confirmed first field baseline; app instead showed unverified planner fallback week 2026-09-21. OCR diagnostic has no raw tokens/images and cannot establish why header failed. A manual confirmation is not model accuracy.",
+  "privacy": "synthetic-or-anonymized",
+  "expected": {
+    "rotaWeekStart": "2026-09-07",
+    "absentWeekdays": [5],
+    "shifts": [
+      {"weekday": 1, "start": "09:30", "identityExpected": true},
+      {"weekday": 2, "start": "16:00", "identityExpected": true},
+      {"weekday": 3, "start": "16:00", "identityExpected": true},
+      {"weekday": 4, "start": "16:00", "identityExpected": true},
+      {"weekday": 6, "start": "16:00", "identityExpected": true},
+      {"weekday": 7, "start": "16:00", "identityExpected": true}
+    ]
+  },
+  "observedUserReport": {
+    "matchingEmployeeMarkersByWeekday": [1, 2, 3, 6, 7],
+    "missedEmployeeWeekday": 4,
+    "reportedScanMs": 27145,
+    "detectedWeekWasFallback": true,
+    "diagnosticCandidateArraySize": 0,
+    "diagnosticViewerSuggestionsInScreenshot": 5,
+    "note": "Observed markers are user-reported visual matches; do not treat them as automatically verified or start-time-correct."
+  }
+}

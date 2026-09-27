@@ -29,11 +29,19 @@ for case_path in sorted(CASES.glob('*.json')):
         expected = case['expected']
         monday = date.fromisoformat(expected['rotaWeekStart'])
         assert monday.weekday() == 0, 'Week must start Monday'
+        seen_shifts = set()
+        absent_weekdays = expected.get('absentWeekdays', [])
+        assert all(type(day) is int and 1 <= day <= 7 for day in absent_weekdays)
+        assert len(absent_weekdays) == len(set(absent_weekdays))
         for row in expected['shifts']:
             assert 1 <= row['weekday'] <= 7
             assert re.fullmatch(r'(?:[01]\d|2[0-3]):[0-5]\d', row['start'])
             assert type(row['identityExpected']) is bool
             assert monday <= monday + timedelta(days=row['weekday'] - 1) <= monday + timedelta(days=6)
+            assert row['weekday'] not in absent_weekdays, 'Shift on documented no-shift day'
+            key_pair = (row['weekday'], row['start'])
+            assert key_pair not in seen_shifts, 'Duplicate exact shift in ground truth'
+            seen_shifts.add(key_pair)
         # These metadata fixtures deliberately contain no names or photographs.
         assert 'employeeName' not in case and 'imagePath' not in case
     except (ValueError, KeyError, AssertionError, TypeError) as exc:
