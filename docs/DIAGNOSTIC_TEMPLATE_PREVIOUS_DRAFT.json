@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "note": "SCHEMA EXAMPLE ONLY; not a record extracted from a running ShiftWatch app",
+  "appVersion": "replace-with-build-version",
+  "modelVersion": "replace-with-recognizer-version",
+  "sessionId": "random-session-id",
+  "sessionGeneration": 1,
+  "document": {
+    "hashedImageDigest": "SHA256-or-equivalent-not-the-photo",
+    "imageWidth": null,
+    "imageHeight": null,
+    "kind": "UNKNOWN",
+    "rotaWeek": {
+      "monday": null,
+      "source": "UNRESOLVED",
+      "confidence": null,
+      "manuallyConfirmed": false,
+      "headerEvidence": [],
+      "contradictions": []
+    },
+    "weekdayColumns": [],
+    "physicalBlocks": []
+  },
+  "analysis": {
+    "status": "NOT_STARTED",
+    "stages": [],
+    "cancellationReason": null,
+    "errors": []
+  },
+  "candidates": [],
+  "confirmedUserEdits": [],
+  "uiResponsiveness": {
+    "manualInputWhileAnalyzingWorked": null,
+    "maxObservedTapLatencyMs": null,
+    "anrOccurred": null
+  },
+  "privacy": {
+    "containsRawPhoto": false,
+    "containsEmployeeNames": false,
+    "containsHandwritingCrops": false,
+    "userOptedInToSensitiveData": false
+  }
+}

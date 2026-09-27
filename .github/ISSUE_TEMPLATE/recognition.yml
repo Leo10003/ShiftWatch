@@ -1,0 +1,37 @@
+name: Recognition regression
+description: Reproduce a date, time, geometry, or employee-match failure without exposing coworker information
+labels: [bug, recognition]
+body:
+  - type: input
+    id: version
+    attributes:
+      label: App version and device
+      placeholder: v20.7.1 / phone or emulator / Android version
+    validations:
+      required: true
+  - type: dropdown
+    id: category
+    attributes:
+      label: Subsystem
+      options: [Date header, Time block, Employee suggestion, Image viewer, Concurrent editing, Crash/ANR, Other]
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Reproduction steps
+      description: Use anonymized descriptions; do not upload full workplace rotas publicly.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected and observed behavior
+      description: Include correct weekday/start time only where authorized to share.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Sanitized diagnostic evidence (optional)
+      description: Verify that diagnostic exports contain no personal details before sharing.

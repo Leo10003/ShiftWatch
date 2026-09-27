@@ -1,0 +1,24 @@
+# Android Studio, Gradle and machine-specific files
+.gradle/
+.kotlin/
+**/build/
+local.properties
+.idea/
+*.iml
+*.apk
+*.aab
+captures/
+*.hprof
+*.log
+# Workplace rota photos and identifying information must never be committed
+/test-data/private/
+/test-data/**/*.jpg
+/test-data/**/*.jpeg
+/test-data/**/*.png
+/test-data/**/*.webp
+/test-data/**/*.pdf
+/test-data/**/*.heic
+/test-data/**/*diagnostic*.json
+/test-data/**/*labelled-export*.json
+.DS_Store
+Thumbs.db

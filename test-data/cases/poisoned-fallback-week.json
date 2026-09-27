@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "caseId": "poisoned-fallback-week",
+  "scenario": "Synthetic seven-day header 21.09–27.09 with an incorrect December fallback; expected year explicitly specified for reproducibility.",
+  "expected": {
+    "rotaWeekStart": "2026-09-21",
+    "shifts": []
+  },
+  "privacy": "synthetic-or-anonymized",
+  "notes": "Metadata-only example; no private rota photograph and no claim of tested image recognition."
+}

@@ -1,0 +1,23 @@
+name: Build or stability failure
+description: Report compilation errors, ANRs and import-flow crashes
+labels: [bug, stability]
+body:
+  - type: input
+    id: version
+    attributes:
+      label: Exact version / commit and Android Studio version
+    validations:
+      required: true
+  - type: textarea
+    id: errors
+    attributes:
+      label: Exact error output and file:line if available
+      description: Remove machine paths/usernames and personal information.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+    validations:
+      required: true

@@ -1,0 +1,5 @@
+Focused offline test suite: 31 passed / 0 failed (9 actual source-test classes, local JUnit-compatible runner).
+Additional synthetic regression harness: 11 passed / 0 failed.
+Kotlin PSI syntax parser: 47 files parsed, 0 syntax errors.
+Android Gradle compile: NOT RUN SUCCESSFULLY. Wrapper cannot download Gradle 9.5.0 (UnknownHostException: services.gradle.org).
+These offline checks do not substitute for Android Studio compilation or physical-device testing.

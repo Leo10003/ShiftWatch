@@ -1,0 +1,11 @@
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@color/launcher_background" />
+    <item>
+        <inset
+            android:drawable="@drawable/shiftwatch_logo"
+            android:insetLeft="6dp"
+            android:insetTop="6dp"
+            android:insetRight="6dp"
+            android:insetBottom="6dp" />
+    </item>
+</layer-list>

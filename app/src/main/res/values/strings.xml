@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">ShiftWatch</string>
+    <string name="widget_description">One-tap clock in / clock out</string>
+</resources>
