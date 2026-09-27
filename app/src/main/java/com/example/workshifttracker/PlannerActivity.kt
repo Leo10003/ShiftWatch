@@ -991,6 +991,14 @@ private fun ImportReviewSheet(
             }
         }
     }
+    // Use the installed package metadata: diagnostic schema and installed app version
+    // are separate values, and stale hardcoded labels obscure real scan comparisons.
+    val diagnosticContext = LocalContext.current
+    val installedAppVersion = remember(diagnosticContext) {
+        runCatching {
+            diagnosticContext.packageManager.getPackageInfo(diagnosticContext.packageName, 0).versionName
+        }.getOrNull() ?: "unknown"
+    }
     val exportDiagnostics = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/json")
     ) { uri ->
@@ -1017,7 +1025,7 @@ private fun ImportReviewSheet(
                     // crops. Even the candidate IDs are replaced with local ordinal indices.
                     val result = JSONObject().apply {
                         put("schemaVersion", 8)
-                        put("appVersion", "20.8.5")
+                        put("appVersion", installedAppVersion)
                         put("sessionId", diagnosticSession)
                         put("captureUtc", java.time.Instant.now().toString())
                         put("scanInProgress", scanSnapshot)
@@ -2306,7 +2314,13 @@ private fun ZoomableRotaImage(
     var tapHandlingBusy by remember { mutableStateOf(false) }
     var lastInteractionMillis by remember { mutableLongStateOf(0L) }
     var showBlockDiagnostics by remember(rawBitmap) { mutableStateOf(false) }
-    var visionMessage by remember { mutableStateOf("Analyzing name, table structure and shift times…") }
+    var visionMessage by remember(rawBitmap) {
+        mutableStateOf(
+            if (reusedCache != null) RotaViewerStatus.completedSuggestions(
+                markers.count { it.draft == null }
+            ) else "Analyzing name, table structure and shift times…"
+        )
+    }
     var currentVisionProfile by remember(rawBitmap) { mutableStateOf(initialVisionProfile) }
     LaunchedEffect(initialVisionProfile) { currentVisionProfile = initialVisionProfile }
     LaunchedEffect(initialDrafts) {
@@ -2356,7 +2370,10 @@ private fun ZoomableRotaImage(
         // They both scan the full rota and previously could overlap during first composition.
         if (visionBusy) return@LaunchedEffect
         if (visionSeeds.isEmpty()) {
-            if (assistData.tokens.isEmpty()) return@LaunchedEffect
+            if (assistData.tokens.isEmpty()) {
+                visionMessage = "No OCR regions found • select shifts manually"
+                return@LaunchedEffect
+            }
             val directHits = OfflineRotaVision.ocrNameHits(assistData, employeeName)
                 .filter { it.exact || it.score >= 0.84f }
             ocrHitCounts = (0..6).map { column -> directHits.count { it.column == column } }
@@ -2385,7 +2402,13 @@ private fun ZoomableRotaImage(
                         TapMarker(match.x, match.y, draft = null, suggestionScore = match.score, origin = "saved_profile")
                     }
                     markers = mergeAutoMarkers(markers, proposed)
-                    visionMessage = "${profileReport.matches.size} handwriting suggestions • confirm blue markers"
+                    visionMessage = RotaViewerStatus.completedSuggestions(profileReport.matches.size)
+                } else if (directHits.isEmpty()) {
+                    visionMessage = if (profileReport == null) {
+                        "Handwriting analysis unavailable • select shifts manually"
+                    } else {
+                        RotaViewerStatus.completedSuggestions(0)
+                    }
                 }
             }
             if (directHits.isNotEmpty()) {
