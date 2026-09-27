@@ -1015,8 +1015,8 @@ private fun ImportReviewSheet(
                     // Privacy by default: no name, photo, OCR text, exact dates or handwriting
                     // crops. Even the candidate IDs are replaced with local ordinal indices.
                     val result = JSONObject().apply {
-                        put("schemaVersion", 3)
-                        put("appVersion", "20.8.1")
+                        put("schemaVersion", 4)
+                        put("appVersion", "20.8.2")
                         put("sessionId", diagnosticSession)
                         put("captureUtc", java.time.Instant.now().toString())
                         put("scanInProgress", scanSnapshot)
@@ -1136,6 +1136,18 @@ private fun ImportReviewSheet(
                                         put("acceptanceFloor", decision.acceptanceFloor?.toDouble() ?: JSONObject.NULL)
                                         put("confuserScore", decision.confuserScore?.toDouble() ?: JSONObject.NULL)
                                         put("decision", decision.status)
+                                        put("topCandidates", JSONArray().apply {
+                                            decision.rankedCandidates.forEach { candidate ->
+                                                put(JSONObject().apply {
+                                                    put("rank", candidate.rank)
+                                                    put("physicalBlockIndex", candidate.physicalBlockIndex ?: JSONObject.NULL)
+                                                    put("verticalDecile", candidate.verticalDecile)
+                                                    put("adjustedScore", candidate.adjustedScore.toDouble())
+                                                    put("positiveScore", candidate.positiveScore.toDouble())
+                                                    put("confuserScore", candidate.confuserScore.toDouble())
+                                                })
+                                            }
+                                        })
                                     })
                                 }
                             }
@@ -1151,6 +1163,18 @@ private fun ImportReviewSheet(
                                         put("acceptanceFloor", decision.acceptanceFloor?.toDouble() ?: JSONObject.NULL)
                                         put("confuserScore", decision.confuserScore?.toDouble() ?: JSONObject.NULL)
                                         put("decision", decision.status)
+                                        put("topCandidates", JSONArray().apply {
+                                            decision.rankedCandidates.forEach { candidate ->
+                                                put(JSONObject().apply {
+                                                    put("rank", candidate.rank)
+                                                    put("physicalBlockIndex", candidate.physicalBlockIndex ?: JSONObject.NULL)
+                                                    put("verticalDecile", candidate.verticalDecile)
+                                                    put("adjustedScore", candidate.adjustedScore.toDouble())
+                                                    put("positiveScore", candidate.positiveScore.toDouble())
+                                                    put("confuserScore", candidate.confuserScore.toDouble())
+                                                })
+                                            }
+                                        })
                                     })
                                 }
                             })

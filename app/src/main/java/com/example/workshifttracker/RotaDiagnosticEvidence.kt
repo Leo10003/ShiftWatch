@@ -64,6 +64,22 @@ internal object RotaDiagnosticEvidence {
         val geometryDecision: String
     )
 
+    /** Only the top three anonymous candidates per day. No OCR, crops or precise coordinates. */
+    data class RankedProfileCandidate(
+        val rank: Int,
+        val physicalBlockIndex: Int?,
+        val verticalDecile: Int,
+        val adjustedScore: Float,
+        val positiveScore: Float,
+        val confuserScore: Float
+    ) {
+        init {
+            require(rank in 1..3 && verticalDecile in 0..9)
+            require(physicalBlockIndex == null || physicalBlockIndex >= 0)
+            require(adjustedScore in 0f..1f && positiveScore in 0f..1f && confuserScore in 0f..1f)
+        }
+    }
+
     data class ProfileDecision(
         val weekdayColumn: Int,
         val candidateCount: Int,
@@ -72,8 +88,13 @@ internal object RotaDiagnosticEvidence {
         val runnerScore: Float?,
         val acceptanceFloor: Float?,
         val confuserScore: Float?,
-        val status: String
+        val status: String,
+        val rankedCandidates: List<RankedProfileCandidate> = emptyList()
     )
+
+    /** Derive stable, coarse image-position buckets without revealing exact image coordinates. */
+    fun verticalDecile(imageY: Float, imageHeight: Float): Int =
+        if (imageHeight <= 0f) 0 else ((imageY / imageHeight).coerceIn(0f, 0.999f) * 10).toInt()
 
     /** Scores are rounded for troubleshooting, never raw image coordinates or OCR text. */
     data class MarkerDetail(

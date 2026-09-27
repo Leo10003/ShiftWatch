@@ -370,7 +370,8 @@ internal object OfflineRotaVision {
         val sy = bitmap.height.toFloat() / assist.imageHeight.toFloat()
         var scanned = 0
         val matches = mutableListOf<Match>()
-        data class Ranked(val candidate: Candidate, val score: Float, val negative: Float, val separation: Float)
+        data class Ranked(val candidate: Candidate, val score: Float, val positive: Float,
+                          val negative: Float, val separation: Float)
         data class Deferred(
             val column: Int,
             val x: Float,
@@ -397,6 +398,7 @@ internal object OfflineRotaVision {
                 val average = scores.average().toFloat()
                 val strongest = scores.last()
                 var score = (strongest * 0.46f + median * 0.29f + average * 0.21f + weakest * 0.04f).coerceIn(0f, 1f)
+                val positive = score
                 var negative = 0f
                 if (model.negatives.isNotEmpty()) {
                     val negativeScores = model.negatives.map { similarity(it, sig) }.sortedDescending()
@@ -407,7 +409,7 @@ internal object OfflineRotaVision {
                     if (separation < boundary.requiredSeparation) score -= 0.12f
                     else if (separation > boundary.requiredSeparation + 0.13f) score += 0.025f
                 }
-                Ranked(candidate, score.coerceIn(0f, 1f), negative, score - negative)
+                Ranked(candidate, score.coerceIn(0f, 1f), positive, negative, score - negative)
             }.sortedByDescending { it.score }
             val best = ranked.firstOrNull()
             if (best == null) {
@@ -443,6 +445,17 @@ internal object OfflineRotaVision {
                     model.negatives.isNotEmpty() && best.separation < 0.075f -> "rejected_confuser_separation"
                     best.negative >= 0.78f -> "rejected_high_confuser_similarity"
                     else -> "rejected_combined_policy"
+                },
+                rankedCandidates = ranked.take(3).mapIndexed { index, item ->
+                    val documentY = item.candidate.band.center / sy
+                    RotaDiagnosticEvidence.RankedProfileCandidate(
+                        rank = index + 1,
+                        physicalBlockIndex = RotaGridModel.blockIndexForY(assist, column, documentY),
+                        verticalDecile = RotaDiagnosticEvidence.verticalDecile(documentY, assist.imageHeight.toFloat()),
+                        adjustedScore = item.score,
+                        positiveScore = item.positive,
+                        confuserScore = item.negative
+                    )
                 })
             if (normalAccept || rescueAccept) {
                 matches += Match(

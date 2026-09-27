@@ -66,4 +66,19 @@ class RotaDiagnosticEvidenceTest {
         assertEquals(1, summary.profileDecisions.size)
     }
 
+    @Test fun coarseRankedCandidatesKeepBlockIdentityWithoutCoordinates() {
+        assertEquals(0, RotaDiagnosticEvidence.verticalDecile(-20f, 100f))
+        assertEquals(4, RotaDiagnosticEvidence.verticalDecile(49f, 100f))
+        assertEquals(9, RotaDiagnosticEvidence.verticalDecile(200f, 100f))
+        val alternatives = listOf(
+            RotaDiagnosticEvidence.RankedProfileCandidate(1, 2, 7, 0.447f, 0.61f, 0.58f),
+            RotaDiagnosticEvidence.RankedProfileCandidate(2, 1, 4, 0.404f, 0.42f, 0.10f)
+        )
+        val decision = RotaDiagnosticEvidence.ProfileDecision(1, 27, 25,
+            0.447f, 0.404f, 0.55f, 0.58f, "rejected_below_rescue_floor", alternatives)
+        assertEquals(2, decision.rankedCandidates[0].physicalBlockIndex)
+        assertEquals(1, decision.rankedCandidates[1].physicalBlockIndex)
+        assertEquals("rejected_below_rescue_floor", decision.status)
+    }
+
 }
