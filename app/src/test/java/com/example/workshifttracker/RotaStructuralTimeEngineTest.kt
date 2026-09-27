@@ -76,4 +76,45 @@ class RotaStructuralTimeEngineTest {
         assertTrue(result.first { it.blockIndex == 1 }.time != LocalTime.of(20, 0))
         assertTrue(result.first { it.blockIndex == 1 }.ambiguous)
     }
+    @Test
+    fun twoIndependentStrongPageLabelsDefeatIsolatedFormattedConflict() {
+        val observations = listOf(
+            RotaStructuralTimeEngine.Observation(0, 0, LocalTime.of(9, 30), .86f, true, false),
+            RotaStructuralTimeEngine.Observation(0, 1, LocalTime.of(9, 30), .86f, true, false),
+            RotaStructuralTimeEngine.Observation(0, 2, LocalTime.of(11, 0), .86f, true, false)
+        )
+        val result = RotaStructuralTimeEngine.solve(observations).single()
+        assertEquals(LocalTime.of(9, 30), result.time)
+        assertFalse(result.ambiguous)
+        assertEquals(2, result.strongColumns)
+        assertEquals(0, result.atlasColumns)
+        val margin = result.alternatives[0].score - result.alternatives[1].score
+        assertTrue(margin >= 3.0f)
+        assertTrue(RotaStructuralTimeEngine.qualifiesRepeatedStrongPage(result))
+    }
+
+    @Test
+    fun weakRepeatedPageLabelsAreNotStrongPageEvidence() {
+        val observations = listOf(
+            RotaStructuralTimeEngine.Observation(0, 0, LocalTime.of(9, 30), .5f, false, false),
+            RotaStructuralTimeEngine.Observation(0, 1, LocalTime.of(9, 30), .5f, false, false)
+        )
+        val result = RotaStructuralTimeEngine.solve(observations).single()
+        assertEquals(0, result.strongColumns)
+        assertEquals(0, result.atlasColumns)
+        assertFalse(RotaStructuralTimeEngine.qualifiesRepeatedStrongPage(result))
+    }
+
+    @Test
+    fun sameColumnRepeatedOcrDoesNotCountAsIndependentStrongEvidence() {
+        val observations = listOf(
+            RotaStructuralTimeEngine.Observation(0, 0, LocalTime.of(9, 30), .86f, true, false),
+            RotaStructuralTimeEngine.Observation(0, 0, LocalTime.of(9, 30), .84f, true, false)
+        )
+        val result = RotaStructuralTimeEngine.solve(observations).single()
+        assertEquals(1, result.strongColumns)
+        assertTrue(result.ambiguous)
+        assertFalse(RotaStructuralTimeEngine.qualifiesRepeatedStrongPage(result))
+    }
+
 }

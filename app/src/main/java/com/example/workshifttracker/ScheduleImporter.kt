@@ -1762,6 +1762,11 @@ object ScheduleImporter {
         return result.takeIf {
             val trustedSingle = it.reason == "clear isolated block label" || it.reason == "confirmed learned block mapping"
             val repeatedAtlas = it.supportColumns >= 2 && it.atlasColumns >= 2 && it.confidence >= 0.72f
+            // Two separately positioned, strong page-OCR labels for an identical full
+            // time can resolve their *shared physical block* when a lone conflicting
+            // label is far behind. No atlas crop is required for this narrow case.
+            // Weak tokens and multiple OCR passes on one weekday must not qualify.
+            val repeatedStrongPage = RotaStructuralTimeEngine.qualifiesRepeatedStrongPage(it)
             // Handwritten 13/16/18 labels frequently lose the tiny superscript 00. Three or more
             // weekday columns agreeing on the same full hour inside the same structural block is
             // stronger evidence than a single OCR confidence number. Morning one-digit hours do
@@ -1772,7 +1777,7 @@ object ScheduleImporter {
             // may rank it as a strong hypothesis, but automatic assignment still requires at
             // least one independent label from the current image.
             !it.ambiguous && (it.supportColumns >= 1 || it.atlasColumns >= 1) &&
-                (it.confidence >= 0.76f || repeatedAtlas || repeatedFullHour) &&
+                (it.confidence >= 0.76f || repeatedAtlas || repeatedFullHour || repeatedStrongPage) &&
                 (it.supportColumns >= 2 || it.atlasColumns >= 2 || trustedSingle)
         }
     }

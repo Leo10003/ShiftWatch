@@ -40,7 +40,11 @@ object RotaStructuralTimeEngine {
         val atlasColumns: Int,
         val ambiguous: Boolean,
         val reason: String,
-        val alternatives: List<Alternative> = emptyList()
+        val alternatives: List<Alternative> = emptyList(),
+        // Distinct weekday columns with a strong observation for the selected time.
+        // Exposed so the tap owner can distinguish repeatable strong page OCR from weak
+        // or single-column evidence without treating repeated OCR passes as new votes.
+        val strongColumns: Int = 0
     )
 
     private data class Candidate(
@@ -141,7 +145,8 @@ object RotaStructuralTimeEngine {
                 atlasColumns = selected.atlasColumns,
                 ambiguous = ambiguous,
                 reason = reason,
-                alternatives = options.take(4).map { candidate -> Alternative(candidate.time, candidate.score) }
+                alternatives = options.take(4).map { candidate -> Alternative(candidate.time, candidate.score) },
+                strongColumns = selected.strongColumns
             )
         }
         return chosen
@@ -190,6 +195,19 @@ object RotaStructuralTimeEngine {
         }
 
         return result.sortedByDescending { candidate -> candidate.score }
+    }
+
+    /** A strict escape hatch when independent strong PAGE_OCR times repeat but atlas is absent.
+     * The caller must already own this exact physical block; this method only decides whether
+     * that block has enough independent strong support to offer a provisional time.
+     */
+    fun qualifiesRepeatedStrongPage(result: Resolution): Boolean {
+        if (result.ambiguous || result.supportColumns < 2 || result.strongColumns < 2 ||
+            result.atlasColumns != 0 || result.confidence < 0.70f) return false
+        val winnerScore = result.alternatives.firstOrNull { it.time == result.time }?.score ?: return false
+        val competingScore = result.alternatives.filter { it.time != result.time }
+            .maxOfOrNull { it.score } ?: 0f
+        return winnerScore - competingScore >= 3.0f
     }
 
     private fun blockPriorsForResolution(priors: List<Prior>, block: Int, time: LocalTime): Boolean {
