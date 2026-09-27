@@ -24,7 +24,7 @@ import kotlin.math.sqrt
  * handwritten employee name again in the other day columns. Suggestions are never persisted as
  * shifts until the user confirms them.
  */
-object OfflineRotaVision {
+internal object OfflineRotaVision {
     data class OcrNameHit(
         val x: Float,
         val y: Float,
