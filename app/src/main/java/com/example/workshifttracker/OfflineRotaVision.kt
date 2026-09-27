@@ -140,6 +140,15 @@ internal object OfflineRotaVision {
     // normalized signatures by bitmap + crop rectangle so subsequent learning passes are mostly math.
     private val signatureCache = WeakHashMap<Bitmap, MutableMap<String, Signature?>>()
     private val candidateCache = WeakHashMap<Bitmap, MutableMap<String, List<Candidate>>>()
+    private val candidateTraceCache = WeakHashMap<Bitmap, MutableMap<String, RotaDiagnosticEvidence.CandidatePipeline>>()
+
+    private fun candidateKey(assist: ScheduleImporter.AssistData, column: Int, left: Int, right: Int): String =
+        "${System.identityHashCode(assist)}:$column:$left:$right:${assist.tokens.size}"
+
+    @Synchronized
+    private fun cachedCandidateTrace(bitmap: Bitmap, assist: ScheduleImporter.AssistData,
+                                     column: Int, left: Int, right: Int): RotaDiagnosticEvidence.CandidatePipeline? =
+        candidateTraceCache[bitmap]?.get(candidateKey(assist, column, left, right))
 
     @Synchronized
     private fun cachedCandidates(
@@ -152,8 +161,12 @@ internal object OfflineRotaVision {
         sy: Float
     ): List<Candidate> {
         val perBitmap = candidateCache.getOrPut(bitmap) { mutableMapOf() }
-        val key = "${System.identityHashCode(assist)}:$column:$left:$right:${assist.tokens.size}"
-        return perBitmap.getOrPut(key) { buildCandidates(bitmap, assist, column, left, right, sx, sy) }
+        val key = candidateKey(assist, column, left, right)
+        return perBitmap.getOrPut(key) {
+            val (candidates, trace) = buildCandidates(bitmap, assist, column, left, right, sx, sy)
+            candidateTraceCache.getOrPut(bitmap) { mutableMapOf() }[key] = trace
+            candidates
+        }
     }
 
     @Synchronized
@@ -428,7 +441,8 @@ internal object OfflineRotaVision {
             val best = ranked.firstOrNull()
             if (best == null) {
                 decisions[column] = RotaDiagnosticEvidence.ProfileDecision(column, candidates.size, 0, null, null, null, null,
-                    if (candidates.isEmpty()) "no_candidate_lines" else "no_usable_signatures")
+                    if (candidates.isEmpty()) "no_candidate_lines" else "no_usable_signatures",
+                    pipeline = cachedCandidateTrace(bitmap, assist, column, left, right))
                 continue
             }
             val runner = ranked.getOrNull(1)?.score ?: 0f
@@ -484,6 +498,7 @@ internal object OfflineRotaVision {
                         candidateOrigin = if (item.candidate.ocrText == null) "ink_gap_probe" else "ocr_token_band"
                     )
                 }, runnerOverlapFraction = runnerOverlap, runnerIsSamePhysicalBlock = runnerSameBlock,
+                pipeline = cachedCandidateTrace(bitmap, assist, column, left, right),
                 candidateSources = RotaDiagnosticEvidence.sourceEvidence(ranked.map { item ->
                     val documentY = item.candidate.band.center / sy
                     val origin = if (item.candidate.ocrText == null) "ink_gap_probe" else "ocr_token_band"
@@ -827,15 +842,20 @@ internal object OfflineRotaVision {
         right: Int,
         sx: Float,
         sy: Float
-    ): List<Candidate> {
-        val bands = detectTextBands(bitmap, left, right).map { Candidate(it, null) }.toMutableList()
+    ): Pair<List<Candidate>, RotaDiagnosticEvidence.CandidatePipeline> {
+        val strict = detectTextBands(bitmap, left, right)
+        val bands = strict.map { Candidate(it, null) }.toMutableList()
+        var looseObserved = 0
+        var looseAdded = 0
         // RotaVision 3 adds a second, recall-oriented row detector. The strict detector keeps
         // precision high, while the loose detector rescues faint/thin handwriting that used to
         // be missed completely (the main reason valid names disappeared from whole day columns).
         detectLooseTextBands(bitmap, left, right).forEach { band ->
+            looseObserved++
             val nearest = bands.indices.minByOrNull { abs(bands[it].band.center - band.center) }
             if (nearest == null || abs(bands[nearest].band.center - band.center) > max(10f, bitmap.height * 0.009f)) {
                 bands += Candidate(band, null)
+                looseAdded++
             }
         }
         val sourceBounds = ScheduleImporter.columnBounds(assist, column)
@@ -849,21 +869,27 @@ internal object OfflineRotaVision {
         // OCR passes may return their word boxes in different orders. Since each token merges
         // into the nearest band, canonical geometric ordering prevents input-order-dependent
         // candidate crops when a photograph is scanned repeatedly.
+        var tokensMerged = 0
+        var tokensAdded = 0
+        val tokenDeciles = MutableList(10) { 0 }
         columnTokens.sortedWith(compareBy<ScheduleImporter.AssistToken> { it.top }
             .thenBy { it.left }.thenBy { it.bottom }.thenBy { it.right }
             .thenBy { it.source.ordinal }.thenBy { it.text }).forEach { token ->
+            tokenDeciles[RotaDiagnosticEvidence.verticalDecile(token.cy, assist.imageHeight.toFloat())]++
             val top = (token.top * sy).toInt().coerceIn(0, bitmap.height - 2)
             val bottom = (token.bottom * sy).toInt().coerceIn(top + 1, bitmap.height - 1)
             val candidate = Candidate(Band(top, bottom), token.text)
             val nearestIndex = bands.indices.minByOrNull { abs(bands[it].band.center - candidate.band.center) }
             if (nearestIndex != null && abs(bands[nearestIndex].band.center - candidate.band.center) <= max(10f, bitmap.height * 0.010f)) {
                 val old = bands[nearestIndex]
+                tokensMerged++
                 bands[nearestIndex] = Candidate(
                     Band(min(old.band.top, top), max(old.band.bottom, bottom)),
                     betterOcrText(old.ocrText, token.text)
                 )
             } else {
                 bands += candidate
+                tokensAdded++
             }
         }
         val sourceBodyTop = assist.imageHeight * 0.125f
@@ -883,22 +909,47 @@ internal object OfflineRotaVision {
             if (hs.isEmpty()) max(12, (bitmap.height * 0.018f).toInt()) else hs[hs.size / 2].coerceAtLeast(8)
         }
         val probeStep = max(6, (medianHeight * 0.65f).toInt())
+        var probesAttempted = 0
+        var probesNearExisting = 0
+        var probesInkRejected = 0
+        var probesAdded = 0
         var probeY = bitmapBodyTop.toInt().coerceAtLeast(0)
         while (probeY + medianHeight < bitmapBodyBottom.toInt().coerceAtMost(bitmap.height - 1)) {
             val probe = Band(probeY, (probeY + medianHeight).coerceAtMost(bitmap.height - 1))
             val nearExisting = sortedBands.any { abs(it.center - probe.center) <= max(7f, medianHeight * 0.55f) }
+            probesAttempted++
             if (!nearExisting) {
                 val ink = quickInkFraction(bitmap, left, right, probe)
-                if (ink in 0.012f..0.34f) bands += Candidate(probe, null)
-            }
+                if (ink in 0.012f..0.34f) {
+                    bands += Candidate(probe, null)
+                    probesAdded++
+                } else probesInkRejected++
+            } else probesNearExisting++
             probeY += probeStep
         }
 
-        return bands
+        val validHeights = bands.filter {
+            it.band.height in max(5, (bitmap.height * 0.0035f).toInt())..max(42, (bitmap.height * 0.075f).toInt())
+        }
+        val survivors = validHeights.filter { it.band.center in bitmapBodyTop..bitmapBodyBottom }
             .sortedWith(compareBy<Candidate> { it.band.top }.thenBy { it.band.bottom }
                 .thenBy { if (it.ocrText == null) 1 else 0 }.thenBy { it.ocrText ?: "" })
-            .filter { it.band.height in max(5, (bitmap.height * 0.0035f).toInt())..max(42, (bitmap.height * 0.075f).toInt()) }
-            .filter { it.band.center in bitmapBodyTop..bitmapBodyBottom }
+        val byBlock = survivors.groupingBy {
+            RotaGridModel.blockIndexForY(assist, column, it.band.center / sy) ?: -1
+        }.eachCount().toSortedMap().filterKeys { it >= 0 }
+        val trace = RotaDiagnosticEvidence.CandidatePipeline(
+            strictCount = strict.size, looseObserved = looseObserved, looseAdded = looseAdded,
+            eligibleOcrTokens = columnTokens.size, ocrTokenDeciles = tokenDeciles,
+            ocrMerged = tokensMerged, ocrAdded = tokensAdded,
+            probesAttempted = probesAttempted, probesNearExisting = probesNearExisting,
+            probesInkRejected = probesInkRejected, probesAdded = probesAdded,
+            rejectedHeight = bands.size - validHeights.size,
+            rejectedBody = validHeights.size - survivors.size,
+            finalCandidates = survivors.size,
+            finalOcrCandidates = survivors.count { it.ocrText != null },
+            survivorsByBlock = byBlock
+        )
+        return survivors to trace
     }
 
 

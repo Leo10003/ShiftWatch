@@ -121,6 +121,43 @@ internal object RotaDiagnosticEvidence {
                 winner.confuserScore, winner.physicalBlockIndex)
         }
 
+    /** Instrumentation of candidate *generation*, not recognition confidence. Counts expose
+     * where rows disappear without exporting OCR text or exact image coordinates.
+     */
+    data class CandidatePipeline(
+        val strictCount: Int,
+        val looseObserved: Int,
+        val looseAdded: Int,
+        val eligibleOcrTokens: Int,
+        val ocrTokenDeciles: List<Int>,
+        val ocrMerged: Int,
+        val ocrAdded: Int,
+        val probesAttempted: Int,
+        val probesNearExisting: Int,
+        val probesInkRejected: Int,
+        val probesAdded: Int,
+        val rejectedHeight: Int,
+        val rejectedBody: Int,
+        val finalCandidates: Int,
+        val finalOcrCandidates: Int,
+        val survivorsByBlock: Map<Int, Int>
+    ) {
+        init {
+            require(ocrTokenDeciles.size == 10 && ocrTokenDeciles.all { it >= 0 })
+            require(listOf(strictCount, looseObserved, looseAdded, eligibleOcrTokens, ocrMerged,
+                ocrAdded, probesAttempted, probesNearExisting, probesInkRejected, probesAdded,
+                rejectedHeight, rejectedBody, finalCandidates, finalOcrCandidates).all { it >= 0 })
+            require(looseAdded <= looseObserved && ocrMerged + ocrAdded == eligibleOcrTokens)
+            require(ocrTokenDeciles.sum() == eligibleOcrTokens)
+            require(probesNearExisting + probesInkRejected + probesAdded == probesAttempted)
+            require(strictCount + looseAdded + ocrAdded + probesAdded ==
+                finalCandidates + rejectedHeight + rejectedBody)
+            require(finalOcrCandidates <= finalCandidates)
+            require(survivorsByBlock.keys.all { it >= 0 } && survivorsByBlock.values.all { it >= 0 })
+            require(survivorsByBlock.values.sum() <= finalCandidates)
+        }
+    }
+
     data class ProfileDecision(
         val weekdayColumn: Int,
         val candidateCount: Int,
@@ -133,7 +170,8 @@ internal object RotaDiagnosticEvidence {
         val rankedCandidates: List<RankedProfileCandidate> = emptyList(),
         val runnerOverlapFraction: Float? = null,
         val runnerIsSamePhysicalBlock: Boolean? = null,
-        val candidateSources: List<CandidateSourceEvidence> = emptyList()
+        val candidateSources: List<CandidateSourceEvidence> = emptyList(),
+        val pipeline: CandidatePipeline? = null
     )
 
     /** Candidate overlap is computed locally; exact image coordinates are never exported. */

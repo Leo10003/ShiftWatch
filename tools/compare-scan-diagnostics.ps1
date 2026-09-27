@@ -37,3 +37,23 @@ foreach ($d in 0..6) {
 }
 Write-Host "`nA changed accepted day or a large score difference does not by itself prove OCR instability."
 Write-Host 'Compare source image, saved-profile training, candidate block ranks and preprocessing before tuning thresholds.'
+
+# Schema 8: compare candidate-generation *stages* separately from matcher scores.
+if (@($reports | Where-Object { $_.Data.schemaVersion -ge 8 }).Count -ge 2) {
+    Write-Host "`nCandidate-generation pipeline (schema 8; counts are per weekday):"
+    foreach ($d in 0..6) {
+        Write-Host "`n$($days[$d]):"
+        foreach ($r in $reports) {
+            $decision = @($r.Data.viewerMarkers.savedProfileDecisions | Where-Object { $_.weekdayColumn -eq $d }) | Select-Object -First 1
+            $pipe = $decision.candidatePipeline
+            if ($null -eq $pipe) { Write-Host "  $($r.Name): pipeline unavailable"; continue }
+            $deciles = @($pipe.ocrTokenDeciles) -join ','
+            Write-Host "  $($r.Name): strict=$($pipe.strictCount) loose=$($pipe.looseAdded)/$($pipe.looseObserved) " `
+                "ocr=$($pipe.eligibleOcrTokens) merged=$($pipe.ocrMerged) added=$($pipe.ocrAdded) " `
+                "probes=$($pipe.probesAdded)/$($pipe.probesAttempted) filtered=$($pipe.rejectedHeight)+$($pipe.rejectedBody) " `
+                "final=$($pipe.finalCandidates) (ocr=$($pipe.finalOcrCandidates)) tokensByDecile=[$deciles]"
+        }
+    }
+    Write-Host "`nIf eligible OCR-token counts or deciles change, investigate OCR region production."
+    Write-Host 'If token evidence matches but merge or probe stages differ, investigate segmentation and merging.'
+}

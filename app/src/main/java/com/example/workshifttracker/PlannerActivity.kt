@@ -1016,7 +1016,7 @@ private fun ImportReviewSheet(
                     // Privacy by default: no name, photo, OCR text, exact dates or handwriting
                     // crops. Even the candidate IDs are replaced with local ordinal indices.
                     val result = JSONObject().apply {
-                        put("schemaVersion", 7)
+                        put("schemaVersion", 8)
                         put("appVersion", "20.8.5")
                         put("sessionId", diagnosticSession)
                         put("captureUtc", java.time.Instant.now().toString())
@@ -1141,6 +1141,26 @@ private fun ImportReviewSheet(
                                         put("decision", decision.status)
                                         put("runnerOverlapFraction", decision.runnerOverlapFraction?.toDouble() ?: JSONObject.NULL)
                                         put("runnerIsSamePhysicalBlock", decision.runnerIsSamePhysicalBlock ?: JSONObject.NULL)
+                                        put("candidatePipeline", decision.pipeline?.let { pipe -> JSONObject().apply {
+                                            put("strictCount", pipe.strictCount)
+                                            put("looseObserved", pipe.looseObserved)
+                                            put("looseAdded", pipe.looseAdded)
+                                            put("eligibleOcrTokens", pipe.eligibleOcrTokens)
+                                            put("ocrTokenDeciles", JSONArray(pipe.ocrTokenDeciles))
+                                            put("ocrMerged", pipe.ocrMerged)
+                                            put("ocrAdded", pipe.ocrAdded)
+                                            put("probesAttempted", pipe.probesAttempted)
+                                            put("probesNearExisting", pipe.probesNearExisting)
+                                            put("probesInkRejected", pipe.probesInkRejected)
+                                            put("probesAdded", pipe.probesAdded)
+                                            put("rejectedHeight", pipe.rejectedHeight)
+                                            put("rejectedBody", pipe.rejectedBody)
+                                            put("finalCandidates", pipe.finalCandidates)
+                                            put("finalOcrCandidates", pipe.finalOcrCandidates)
+                                            put("survivorsByBlock", JSONObject().apply {
+                                                pipe.survivorsByBlock.forEach { (block, count) -> put(block.toString(), count) }
+                                            })
+                                        } } ?: JSONObject.NULL)
                                         put("candidateSources", JSONArray().apply {
                                             decision.candidateSources.forEach { source ->
                                                 put(JSONObject().apply {
@@ -1186,6 +1206,26 @@ private fun ImportReviewSheet(
                                         put("decision", decision.status)
                                         put("runnerOverlapFraction", decision.runnerOverlapFraction?.toDouble() ?: JSONObject.NULL)
                                         put("runnerIsSamePhysicalBlock", decision.runnerIsSamePhysicalBlock ?: JSONObject.NULL)
+                                        put("candidatePipeline", decision.pipeline?.let { pipe -> JSONObject().apply {
+                                            put("strictCount", pipe.strictCount)
+                                            put("looseObserved", pipe.looseObserved)
+                                            put("looseAdded", pipe.looseAdded)
+                                            put("eligibleOcrTokens", pipe.eligibleOcrTokens)
+                                            put("ocrTokenDeciles", JSONArray(pipe.ocrTokenDeciles))
+                                            put("ocrMerged", pipe.ocrMerged)
+                                            put("ocrAdded", pipe.ocrAdded)
+                                            put("probesAttempted", pipe.probesAttempted)
+                                            put("probesNearExisting", pipe.probesNearExisting)
+                                            put("probesInkRejected", pipe.probesInkRejected)
+                                            put("probesAdded", pipe.probesAdded)
+                                            put("rejectedHeight", pipe.rejectedHeight)
+                                            put("rejectedBody", pipe.rejectedBody)
+                                            put("finalCandidates", pipe.finalCandidates)
+                                            put("finalOcrCandidates", pipe.finalOcrCandidates)
+                                            put("survivorsByBlock", JSONObject().apply {
+                                                pipe.survivorsByBlock.forEach { (block, count) -> put(block.toString(), count) }
+                                            })
+                                        } } ?: JSONObject.NULL)
                                         put("candidateSources", JSONArray().apply {
                                             decision.candidateSources.forEach { source ->
                                                 put(JSONObject().apply {
