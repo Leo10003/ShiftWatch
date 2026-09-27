@@ -12,7 +12,7 @@ foreach ($path in $Files) {
     $report = Get-Content -Raw -LiteralPath $path | ConvertFrom-Json
     if ([int]$report.schemaVersion -lt 3) { throw "$path has no per-column recognition decisions (requires schema >= 3)." }
     if ($report.scanStage -ne 'COMPLETE') { Write-Warning "$path was exported before scan completion." }
-    if ($report.viewerMarkers.status -ne 'observed_in_viewer') { Write-Warning "$path: open image viewer and wait for its matching pass before export." }
+    if ($report.viewerMarkers.status -ne 'observed_in_viewer') { Write-Warning "${path}: open image viewer and wait for its matching pass before export." }
     $reports += [pscustomobject]@{ Name=(Split-Path -Leaf $path); Data=$report }
 }
 $base = $reports[0].Data.layout
