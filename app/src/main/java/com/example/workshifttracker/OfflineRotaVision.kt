@@ -96,7 +96,8 @@ object OfflineRotaVision {
         val seedColumn: Int,
         val seedY: Float,
         val matches: List<Match>,
-        val scannedLines: Int
+        val scannedLines: Int,
+        val columnDecisions: List<RotaDiagnosticEvidence.ProfileDecision> = emptyList()
     )
 
     /** v13 local identity-model health. Counts are prototype clusters, not raw observations. */
@@ -381,6 +382,7 @@ object OfflineRotaVision {
             val floor: Float
         )
         val deferred = mutableListOf<Deferred>()
+        val decisions = linkedMapOf<Int, RotaDiagnosticEvidence.ProfileDecision>()
         for (column in 0..6) {
             val (sourceLeft, sourceRight) = ScheduleImporter.columnBounds(assist, column)
             val left = (sourceLeft * sx).toInt().coerceIn(0, bitmap.width - 2)
@@ -407,7 +409,12 @@ object OfflineRotaVision {
                 }
                 Ranked(candidate, score.coerceIn(0f, 1f), negative, score - negative)
             }.sortedByDescending { it.score }
-            val best = ranked.firstOrNull() ?: continue
+            val best = ranked.firstOrNull()
+            if (best == null) {
+                decisions[column] = RotaDiagnosticEvidence.ProfileDecision(column, candidates.size, 0, null, null, null, null,
+                    if (candidates.isEmpty()) "no_candidate_lines" else "no_usable_signatures")
+                continue
+            }
             val runner = ranked.getOrNull(1)?.score ?: 0f
             val profilePairScores = mutableListOf<Float>()
             for (i in profiles.indices) for (j in i + 1 until profiles.size) profilePairScores += similarity(profiles[i], profiles[j])
@@ -426,6 +433,17 @@ object OfflineRotaVision {
                 (model.negatives.isEmpty() || best.separation >= 0.075f) &&
                 best.negative < 0.78f
 
+            decisions[column] = RotaDiagnosticEvidence.ProfileDecision(column, candidates.size, ranked.size,
+                best.score, runner, floor, best.negative,
+                when {
+                    normalAccept -> "accepted_normal"
+                    rescueAccept -> "accepted_near_floor"
+                    best.score < rescueFloor -> "rejected_below_rescue_floor"
+                    best.score - runner < 0.060f -> "rejected_insufficient_runner_margin"
+                    model.negatives.isNotEmpty() && best.separation < 0.075f -> "rejected_confuser_separation"
+                    best.negative >= 0.78f -> "rejected_high_confuser_similarity"
+                    else -> "rejected_combined_policy"
+                })
             if (normalAccept || rescueAccept) {
                 matches += Match(
                     x = (sourceLeft + sourceRight) / 2f,
@@ -467,6 +485,7 @@ object OfflineRotaVision {
             for (item in candidates) {
                 if (matches.none { it.column == item.column }) {
                     matches += Match(item.x, item.y, item.column, (item.score * 0.90f).coerceIn(0f, 0.86f))
+                    decisions[item.column] = decisions.getValue(item.column).copy(status = "accepted_weekly_rescue")
                 }
             }
         }
@@ -496,10 +515,12 @@ object OfflineRotaVision {
             for (item in recovery) {
                 if (matches.none { it.column == item.column }) {
                     matches += Match(item.x, item.y, item.column, (item.score * 0.86f).coerceIn(0f, 0.82f))
+                    decisions[item.column] = decisions.getValue(item.column).copy(status = "accepted_mature_profile_recovery")
                 }
             }
         }
-        return Report(-1, 0f, matches.sortedBy { it.column }, scanned)
+        return Report(-1, 0f, matches.sortedBy { it.column }, scanned,
+            (0..6).map { decisions.getValue(it) })
     }
 
     fun findSimilarNames(
@@ -577,9 +598,14 @@ object OfflineRotaVision {
         }.take(80)
 
         val matches = mutableListOf<Match>()
+        val seededDecisions = linkedMapOf<Int, RotaDiagnosticEvidence.ProfileDecision>()
 
         for (column in 0..6) {
-            if (column in seedColumns) continue
+            if (column in seedColumns) {
+                seededDecisions[column] = RotaDiagnosticEvidence.ProfileDecision(column,
+                    columns.getValue(column).candidates.size, 0, null, null, null, null, "seed_column_not_evaluated")
+                continue
+            }
             val data = columns.getValue(column)
             data class Ranked(
                 val candidate: Candidate,
@@ -656,7 +682,13 @@ object OfflineRotaVision {
                 Ranked(candidate, combined.coerceIn(0f, 1f), visual, lexical, negative, clusterSupport, clusterMean)
             }.sortedByDescending { it.score }
 
-            val best = ranked.firstOrNull() ?: continue
+            val best = ranked.firstOrNull()
+            if (best == null) {
+                seededDecisions[column] = RotaDiagnosticEvidence.ProfileDecision(column,
+                    data.candidates.size, 0, null, null, null, null,
+                    if (data.candidates.isEmpty()) "no_candidate_lines" else "no_usable_signatures")
+                continue
+            }
             val runner = ranked.getOrNull(1)?.score ?: 0f
             val margin = (best.score - runner).coerceAtLeast(0f)
             val enoughExamples = seedSigs.size >= 2
@@ -696,6 +728,16 @@ object OfflineRotaVision {
                 (repeatedPattern && styleBest >= styleFloor - 0.045f && best.score >= minScore - 0.045f && discrimination >= 0.025f) ||
                 (strongLexical && styleBest >= 0.54f && discrimination >= -0.015f)
 
+            seededDecisions[column] = RotaDiagnosticEvidence.ProfileDecision(column,
+                data.candidates.size, ranked.size, best.score, runner, minScore, best.negative,
+                when {
+                    accept -> "accepted"
+                    best.score < minScore && !repeatedPattern && !strongLexical -> "rejected_low_score"
+                    !styleAgreement && !repeatedPattern && !strongLexical -> "rejected_style_disagreement"
+                    !discriminativeEnough && !strongLexical -> "rejected_confuser_similarity"
+                    margin < minMargin && best.score < minScore + 0.10f && !repeatedPattern -> "rejected_low_runner_margin"
+                    else -> "rejected_combined_policy"
+                })
             if (accept) {
                 val (sourceLeft, sourceRight) = ScheduleImporter.columnBounds(assist, column)
                 // One employee can only occupy one row per day in this rota format. Surface only the
@@ -717,7 +759,8 @@ object OfflineRotaVision {
             seedColumn = seedSigs.first().column,
             seedY = seedSigs.first().y,
             matches = matches.sortedBy { it.column },
-            scannedLines = columns.values.sumOf { it.candidates.size }
+            scannedLines = columns.values.sumOf { it.candidates.size },
+            columnDecisions = (0..6).map { seededDecisions.getValue(it) }
         )
     }
 

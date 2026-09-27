@@ -42,4 +42,28 @@ class RotaDiagnosticEvidenceTest {
         assertEquals(fallback, result.weekStart)
         assertFalse(result.authoritative)
     }
+    @Test fun comparisonsExposeEvidenceForCorrectWeekWithoutExportingCalendarDates() {
+        val observations = (0..6).map { column ->
+            RotaDateAuthorityEngine.Observation(7 + column, 9, column, true, "private")
+        }
+        val fallback = RotaDiagnosticEvidence.headerWeekFit(observations, LocalDate.of(2026, 9, 21))
+        val actual = RotaDiagnosticEvidence.headerWeekFit(observations, LocalDate.of(2026, 9, 7))
+        assertEquals(0, fallback.matchingColumns)
+        assertEquals(7, actual.matchingColumns)
+        assertEquals(7, actual.explicitMatches)
+    }
+
+    @Test fun diagnosticColumnTraceCanExplainMissingThursdayWithoutAssumingNoName() {
+        val trace = RotaDiagnosticEvidence.ProfileDecision(3, 4, 4, 0.56f, 0.54f,
+            0.60f, 0.18f, "rejected_insufficient_runner_margin")
+        assertEquals(3, trace.weekdayColumn)
+        assertEquals(4, trace.scoredCount)
+        assertEquals("rejected_insufficient_runner_margin", trace.status)
+        val summary = RotaDiagnosticEvidence.MarkerSummary(viewerOpened = true,
+            suggested = 5, suggestionsByColumn = listOf(1, 1, 1, 0, 0, 1, 1),
+            profileDecisions = listOf(trace), profileStatus = "completed")
+        assertEquals(0, summary.suggestionsByColumn[3])
+        assertEquals(1, summary.profileDecisions.size)
+    }
+
 }

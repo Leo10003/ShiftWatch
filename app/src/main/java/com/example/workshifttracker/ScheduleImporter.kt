@@ -1756,6 +1756,49 @@ object ScheduleImporter {
         return structuralTimeModel(assist, geometry, collectAssistTimeCandidates(assist, geometry))
     }
 
+    /**
+     * Diagnostic-only trace of candidates entering the block solver. Does not change voting.
+     * Never exports OCR strings or original coordinates. Duplicate OCR passes are visible
+     * through repeated block/column/time/source entries, not counted as independent votes.
+     */
+    internal fun diagnosticStructuralTimeInputs(assist: AssistData): List<RotaDiagnosticEvidence.TimeInput> {
+        if (assist.imageWidth <= 0 || assist.imageHeight <= 0) return emptyList()
+        val geometry = columnGeometry(assist)
+        val h = assist.imageHeight.coerceAtLeast(1).toFloat()
+        return collectAssistTimeCandidates(assist, geometry).map { candidate ->
+            val column = candidate.column
+            val block = candidate.blockHint ?: RotaGridModel.blockIndexForY(assist, column, candidate.y)
+            val bounds = geometry.bounds.getOrNull(column)
+            val validBlockHint = if (candidate.blockHint == null) true else {
+                val actualBlock = RotaGridModel.blockIndexForY(assist, column, candidate.y)
+                val labelledBounds = RotaGridModel.boundsForBlock(assist, column, candidate.blockHint)
+                labelledBounds != null && (actualBlock == null || actualBlock == candidate.blockHint ||
+                    candidate.y in (labelledBounds.first - h * .012f)..(labelledBounds.second + h * .012f))
+            }
+            val relativeX = bounds?.let { candidate.x - it.first }
+            val columnWidth = bounds?.let { (it.second - it.first).coerceAtLeast(1f) }
+            val withinLabelX = relativeX != null && columnWidth != null &&
+                relativeX >= -columnWidth * .04f && relativeX <= columnWidth * .42f
+            val withinBlockTop = if (block == null || candidate.tokenSource == TokenSource.TIME_ATLAS) true else {
+                val edges = RotaGridModel.boundsForBlock(assist, column, block)
+                if (edges == null) false else {
+                    val frac = (candidate.y - edges.first) / (edges.second - edges.first).coerceAtLeast(h * .025f)
+                    frac >= -0.10f && frac <= 0.34f
+                }
+            }
+            val reason = when {
+                block == null -> "no_physical_block"
+                !validBlockHint -> "stale_block_hint"
+                bounds == null || !withinLabelX -> "outside_time_label_zone"
+                !withinBlockTop -> "outside_block_top"
+                else -> "eligible_for_solver"
+            }
+            RotaDiagnosticEvidence.TimeInput(block, column, candidate.time.toString(),
+                candidate.tokenSource.name, candidate.strong, candidate.alternate,
+                (candidate.confidence * 10).toInt().coerceIn(0, 10), reason)
+        }
+    }
+
     private fun structuralTimeResolutionForTap(
         assist: AssistData,
         geometry: ColumnGeometry,
@@ -2521,6 +2564,30 @@ object ScheduleImporter {
             RotaDiagnosticEvidence.dateHypothesis("actual_review_resolution",
                 documentWeekResolution(assist, rawText, fallbackMonday, today), fallbackMonday)
         )
+    }
+
+    /** Only counts by weekday, never OCR strings or inferred calendar dates. */
+    internal fun diagnosticHeaderObservationCounts(assist: AssistData): Pair<List<Int>, List<Int>> {
+        if (assist.imageHeight <= 0) return List(7) { 0 } to List(7) { 0 }
+        val height = assist.imageHeight.toFloat()
+        val bottom = headerDateZoneBottom(assist) / height
+        val tokens = assist.tokens.map { token ->
+            RotaDateAuthorityEngine.Token(token.text, columnIndexForX(assist, token.cx), token.cy / height)
+        }
+        val observations = RotaDateAuthorityEngine.collectObservations(tokens, max(bottom, .255f), bottom)
+        return (0..6).map { column -> observations.count { it.column == column } } to
+            (0..6).map { column -> observations.count { it.column == column && it.explicit } }
+    }
+
+    internal fun diagnosticHeaderWeekFit(assist: AssistData, weekMonday: LocalDate): RotaDiagnosticEvidence.HeaderWeekFit {
+        if (assist.imageHeight <= 0) return RotaDiagnosticEvidence.HeaderWeekFit(0, 0, 0, 0)
+        val height = assist.imageHeight.toFloat()
+        val bottom = headerDateZoneBottom(assist) / height
+        val tokens = assist.tokens.map { token ->
+            RotaDateAuthorityEngine.Token(token.text, columnIndexForX(assist, token.cx), token.cy / height)
+        }
+        return RotaDiagnosticEvidence.headerWeekFit(
+            RotaDateAuthorityEngine.collectObservations(tokens, max(bottom, .255f), bottom), weekMonday)
     }
 
     /** Best on-device week estimate. The UI always allows the user to override this once. */

@@ -1003,6 +1003,7 @@ private fun ImportReviewSheet(
             val traceSnapshot = scanTrace
             val markerSnapshot = viewerMarkers
             val fallbackSnapshot = fallbackWeekStart
+            val displayedWeekSnapshot = rotaWeekStart
             val textSnapshot = rawText
             val manualWeekConfirmedSnapshot = weekManuallyOverridden
             val displayedWeekOffsetSnapshot = java.time.temporal.ChronoUnit.DAYS.between(startOfWeek(fallbackWeekStart), rotaWeekStart)
@@ -1014,8 +1015,8 @@ private fun ImportReviewSheet(
                     // Privacy by default: no name, photo, OCR text, exact dates or handwriting
                     // crops. Even the candidate IDs are replaced with local ordinal indices.
                     val result = JSONObject().apply {
-                        put("schemaVersion", 2)
-                        put("appVersion", "20.8")
+                        put("schemaVersion", 3)
+                        put("appVersion", "20.8.1")
                         put("sessionId", diagnosticSession)
                         put("captureUtc", java.time.Instant.now().toString())
                         put("scanInProgress", scanSnapshot)
@@ -1071,6 +1072,36 @@ private fun ImportReviewSheet(
                                     })
                                 }
                             })
+                            val (headerCounts, explicitCounts) = ScheduleImporter.diagnosticHeaderObservationCounts(dataSnapshot)
+                            put("headerObservationCountsByWeekday", JSONArray(headerCounts))
+                            put("explicitHeaderObservationCountsByWeekday", JSONArray(explicitCounts))
+                            put("timeCandidateTrace", JSONArray().apply {
+                                ScheduleImporter.diagnosticStructuralTimeInputs(dataSnapshot).forEach { entry ->
+                                    put(JSONObject().apply {
+                                        put("physicalBlockIndex", entry.physicalBlockIndex ?: JSONObject.NULL)
+                                        put("weekdayColumn", entry.weekdayColumn)
+                                        put("time", entry.proposedTime)
+                                        put("source", entry.tokenSource)
+                                        put("strong", entry.strong)
+                                        put("alternate", entry.alternate)
+                                        put("confidenceDecile", entry.confidenceDecile)
+                                        put("geometryDecision", entry.geometryDecision)
+                                    })
+                                }
+                            })
+                            put("weekEvidenceComparison", JSONObject().apply {
+                                val fallbackFit = ScheduleImporter.diagnosticHeaderWeekFit(dataSnapshot, fallbackSnapshot)
+                                val shownFit = ScheduleImporter.diagnosticHeaderWeekFit(dataSnapshot, displayedWeekSnapshot)
+                                fun JSONObject.putFit(fit: RotaDiagnosticEvidence.HeaderWeekFit) {
+                                    put("matchingObservations", fit.observationMatches)
+                                    put("matchingExplicitObservations", fit.explicitMatches)
+                                    put("matchingDistinctWeekdayColumns", fit.matchingColumns)
+                                    put("totalObservations", fit.totalObservations)
+                                }
+                                put("plannerFallback", JSONObject().apply { putFit(fallbackFit) })
+                                put("displayedWeek", JSONObject().apply { putFit(shownFit) })
+                                put("displayedWeekConfirmedByUser", manualWeekConfirmedSnapshot)
+                            })
                             put("dateHypotheses", JSONArray().apply {
                                 ScheduleImporter.diagnosticDateHypotheses(dataSnapshot, textSnapshot, fallbackSnapshot).forEach { h ->
                                     put(JSONObject().apply {
@@ -1091,6 +1122,49 @@ private fun ImportReviewSheet(
                             put("note", "Review drafts and blue viewer suggestions have distinct identities and must not be treated as the same set")
                         })
                         put("viewerMarkers", JSONObject().apply {
+                            put("ocrNameHitsByWeekdayColumn", JSONArray(markerSnapshot.ocrHitsByColumn))
+                            put("savedProfileStatus", markerSnapshot.profileStatus)
+                            put("seededSearchStatus", markerSnapshot.seededSearchStatus)
+                            fun JSONArray.addDecisions(decisions: List<RotaDiagnosticEvidence.ProfileDecision>) {
+                                decisions.forEach { decision ->
+                                    put(JSONObject().apply {
+                                        put("weekdayColumn", decision.weekdayColumn)
+                                        put("candidateLineCount", decision.candidateCount)
+                                        put("scoredLineCount", decision.scoredCount)
+                                        put("topScore", decision.bestScore?.toDouble() ?: JSONObject.NULL)
+                                        put("runnerScore", decision.runnerScore?.toDouble() ?: JSONObject.NULL)
+                                        put("acceptanceFloor", decision.acceptanceFloor?.toDouble() ?: JSONObject.NULL)
+                                        put("confuserScore", decision.confuserScore?.toDouble() ?: JSONObject.NULL)
+                                        put("decision", decision.status)
+                                    })
+                                }
+                            }
+                            put("seededVisualDecisions", JSONArray().apply { addDecisions(markerSnapshot.seededSearchDecisions) })
+                            put("savedProfileDecisions", JSONArray().apply {
+                                markerSnapshot.profileDecisions.forEach { decision ->
+                                    put(JSONObject().apply {
+                                        put("weekdayColumn", decision.weekdayColumn)
+                                        put("candidateLineCount", decision.candidateCount)
+                                        put("scoredLineCount", decision.scoredCount)
+                                        put("topScore", decision.bestScore?.toDouble() ?: JSONObject.NULL)
+                                        put("runnerScore", decision.runnerScore?.toDouble() ?: JSONObject.NULL)
+                                        put("acceptanceFloor", decision.acceptanceFloor?.toDouble() ?: JSONObject.NULL)
+                                        put("confuserScore", decision.confuserScore?.toDouble() ?: JSONObject.NULL)
+                                        put("decision", decision.status)
+                                    })
+                                }
+                            })
+                            put("markerDetails", JSONArray().apply {
+                                markerSnapshot.markerDetails.forEach { marker ->
+                                    put(JSONObject().apply {
+                                        put("weekdayColumn", marker.weekdayColumn)
+                                        put("physicalBlockIndex", marker.physicalBlockIndex ?: JSONObject.NULL)
+                                        put("origin", marker.origin)
+                                        put("scoreDecile", marker.scoreBucket ?: JSONObject.NULL)
+                                        put("confirmed", marker.confirmed)
+                                    })
+                                }
+                            })
                             put("status", RotaDiagnosticEvidence.status(markerSnapshot))
                             put("suggestedCount", markerSnapshot.suggested)
                             put("confirmedCount", markerSnapshot.confirmed)
@@ -2028,7 +2102,8 @@ private fun ZoomableRotaImage(
         val x: Float,
         val y: Float,
         val draft: ScheduleImporter.Draft?,
-        val suggestionScore: Float? = null
+        val suggestionScore: Float? = null,
+        val origin: String = "user_tap"
     )
 
     var scale by remember { mutableFloatStateOf(1.0f) }
@@ -2038,7 +2113,12 @@ private fun ZoomableRotaImage(
     var viewportWidthPx by remember { mutableFloatStateOf(0f) }
     var markers by remember(rawBitmap) { mutableStateOf<List<TapMarker>>(emptyList()) }
     val currentMarkerCallback by rememberUpdatedState(onMarkerSummary)
-    LaunchedEffect(markers, assistData) {
+    var ocrHitCounts by remember(rawBitmap) { mutableStateOf(List(7) { 0 }) }
+    var profileColumnDecisions by remember(rawBitmap) { mutableStateOf<List<RotaDiagnosticEvidence.ProfileDecision>>(emptyList()) }
+    var profileTraceStatus by remember(rawBitmap) { mutableStateOf("not_attempted") }
+    var seededColumnDecisions by remember(rawBitmap) { mutableStateOf<List<RotaDiagnosticEvidence.ProfileDecision>>(emptyList()) }
+    var seededTraceStatus by remember(rawBitmap) { mutableStateOf("not_attempted") }
+    LaunchedEffect(markers, assistData, ocrHitCounts, profileColumnDecisions, profileTraceStatus, seededColumnDecisions, seededTraceStatus) {
         val suggestedByColumn = MutableList(7) { 0 }
         val confirmedByColumn = MutableList(7) { 0 }
         markers.forEach { marker ->
@@ -2053,7 +2133,22 @@ private fun ZoomableRotaImage(
             suggested = suggestedByColumn.sum(),
             confirmed = confirmedByColumn.sum(),
             suggestionsByColumn = suggestedByColumn,
-            confirmedByColumn = confirmedByColumn
+            confirmedByColumn = confirmedByColumn,
+            ocrHitsByColumn = ocrHitCounts,
+            profileDecisions = profileColumnDecisions,
+            profileStatus = profileTraceStatus,
+            seededSearchDecisions = seededColumnDecisions,
+            seededSearchStatus = seededTraceStatus,
+            markerDetails = markers.map { marker ->
+                val column = ScheduleImporter.columnIndexForX(assistData, marker.x)
+                RotaDiagnosticEvidence.MarkerDetail(
+                    weekdayColumn = column,
+                    physicalBlockIndex = RotaGridModel.blockIndexForY(assistData, column, marker.y),
+                    origin = if (marker.draft != null) "confirmed_user_selection" else marker.origin,
+                    scoreBucket = marker.suggestionScore?.let { (it.coerceIn(0f, 1f) * 10).toInt().coerceAtMost(9) },
+                    confirmed = marker.draft != null
+                )
+            }
         ))
     }
     var pendingDraftId by remember { mutableStateOf<String?>(null) }
@@ -2118,6 +2213,7 @@ private fun ZoomableRotaImage(
             if (assistData.tokens.isEmpty()) return@LaunchedEffect
             val directHits = OfflineRotaVision.ocrNameHits(assistData, employeeName)
                 .filter { it.exact || it.score >= 0.84f }
+            ocrHitCounts = (0..6).map { column -> directHits.count { it.column == column } }
             // Single bootstrap owner: saved-profile matching runs BEFORE OCR-based visual
             // expansion, never in a competing LaunchedEffect. This also allows OCR expansion
             // after a saved profile finds no matches (the old launch race could skip it forever).
@@ -2136,9 +2232,11 @@ private fun ZoomableRotaImage(
                 } finally {
                     visionBusy = false
                 }
+                profileTraceStatus = if (profileReport == null) "failed" else "completed"
+                profileColumnDecisions = profileReport?.columnDecisions.orEmpty()
                 if (profileReport != null && profileReport.matches.isNotEmpty()) {
                     val proposed = profileReport.matches.map { match ->
-                        TapMarker(match.x, match.y, draft = null, suggestionScore = match.score)
+                        TapMarker(match.x, match.y, draft = null, suggestionScore = match.score, origin = "saved_profile")
                     }
                     markers = mergeAutoMarkers(markers, proposed)
                     visionMessage = "${profileReport.matches.size} handwriting suggestions • confirm blue markers"
@@ -2150,9 +2248,9 @@ private fun ZoomableRotaImage(
                 val directMarkers = directHits.map { hit ->
                     if (reviewOnly) {
                         val draft = initialDrafts.firstOrNull { it.columnIndex == hit.column }
-                        TapMarker(hit.x, hit.y, draft = draft, suggestionScore = if (draft == null) hit.score else null)
+                        TapMarker(hit.x, hit.y, draft = draft, suggestionScore = if (draft == null) hit.score else null, origin = "ocr_name")
                     } else {
-                        TapMarker(hit.x, hit.y, draft = null, suggestionScore = if (hit.exact) 0.99f else hit.score)
+                        TapMarker(hit.x, hit.y, draft = null, suggestionScore = if (hit.exact) 0.99f else hit.score, origin = "ocr_name")
                     }
                 }
                 var mergedMarkers = mergeAutoMarkers(markers, directMarkers)
@@ -2172,9 +2270,11 @@ private fun ZoomableRotaImage(
                     } catch (_: Exception) {
                         null
                     }
+                    seededTraceStatus = if (report == null) "failed" else "completed"
+                    seededColumnDecisions = report?.columnDecisions.orEmpty()
                     if (report != null) {
                         val visualMarkers = report.matches.map { match ->
-                            TapMarker(match.x, match.y, draft = null, suggestionScore = match.score)
+                            TapMarker(match.x, match.y, draft = null, suggestionScore = match.score, origin = "seeded_visual_search")
                         }
                         mergedMarkers = mergeAutoMarkers(mergedMarkers, visualMarkers)
                         markers = mergedMarkers
@@ -2311,6 +2411,8 @@ private fun ZoomableRotaImage(
                 }
             }
             result.onSuccess { report ->
+                seededTraceStatus = "completed"
+                seededColumnDecisions = report.columnDecisions
                 fun candidateBlock(column: Int, y: Float): Int =
                     RotaGridModel.blockIndexForY(assistData, column, y)
                         ?: (y / (sourceHeight * .06f).coerceAtLeast(1f)).toInt()
@@ -2327,7 +2429,7 @@ private fun ZoomableRotaImage(
                     } }
                     .map { match ->
                         // Newly learned handwriting matches are also review suggestions only.
-                        TapMarker(match.x, match.y, draft = null, suggestionScore = match.score)
+                        TapMarker(match.x, match.y, draft = null, suggestionScore = match.score, origin = "learned_visual_search")
                     }
                 val confirmed = (markers.filter { it.draft != null } + suggestions.filter { it.draft != null })
                     .distinctBy { it.draft?.id ?: "${it.x}:${it.y}" }
@@ -2353,6 +2455,8 @@ private fun ZoomableRotaImage(
                     else -> "${unresolvedSuggestions.size} suggested matches • tap blue markers to confirm"
                 }
             }.onFailure {
+                seededTraceStatus = "failed"
+                seededColumnDecisions = emptyList()
                 visionMessage = "Smart matching paused • manual selection remains available"
             }
             visionBusy = false
