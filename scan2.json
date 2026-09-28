@@ -1,0 +1,2896 @@
+{
+  "schemaVersion": 15,
+  "appVersion": "20.8.18",
+  "sessionId": "ccc5392e-be0a-45e3-84ba-f544606829a1",
+  "captureUtc": "2026-09-28T18:59:18.940849Z",
+  "scanInProgress": false,
+  "scanStage": "COMPLETE",
+  "scanStageDurationsMs": {
+    "PREVIEW": 388,
+    "DECODE": 262,
+    "PAGE_OCR": 6057,
+    "CONTRAST_OCR": 5062,
+    "THRESHOLD_OCR": 6569,
+    "HEADER": 3676,
+    "TIMES": 7834,
+    "VERIFY": 237
+  },
+  "scanElapsedMs": 30085,
+  "privacy": "sanitized; no names\/photos\/raw OCR text",
+  "header": {
+    "confidence": 0.47999998927116394,
+    "authoritative": false,
+    "reason": "planner fallback; document date evidence unresolved",
+    "manualReviewTouchedDays": 0,
+    "userConfirmedWeek": false,
+    "displayedWeekOffsetDaysFromPlannerFallback": 0
+  },
+  "ocrGeometryFingerprint": "771307f3e5c7f95ce96becfd",
+  "ocrGeometryXBucketFingerprints": [
+    "76a6fe554ccff4d13cc3da3a",
+    "2bc9bade4dd12482033b570a",
+    "24be1c0b9633acc718068416",
+    "7a6b76b8e135e27116fc2ca6",
+    "f04ecc5430ce186f96a2de96",
+    "4ec680c07000910f87a84884",
+    "75c0f4ac13548496eb5d1084"
+  ],
+  "layout": {
+    "imageWidth": 1601,
+    "imageHeight": 1140,
+    "documentKind": "MIXED",
+    "ocrPasses": 3,
+    "ocrTokenCount": 207,
+    "headerFocusTokenCount": 39,
+    "timeAtlasTokenCount": 9,
+    "verticalGridRules": 6,
+    "rowBoundaryCounts": [
+      3,
+      4,
+      4,
+      4,
+      4,
+      4,
+      4
+    ]
+  },
+  "structuralTimeBands": [
+    "B1 09:00 · 1d\/0a · 61% · review",
+    "B2 13:00 · 1d\/0a · 82% · resolved",
+    "B3 09:00 · 1d\/0a · 61% · review"
+  ],
+  "structuralTimeEvidence": [
+    {
+      "physicalBlockIndex": 0,
+      "proposedTime": "09:00",
+      "confidence": 0.611145555973053,
+      "requiresReview": true,
+      "distinctSupportColumns": 1,
+      "strongSupportColumns": 0,
+      "independentAtlasColumns": 0,
+      "reason": "weak structural block evidence",
+      "alternatives": [
+        {
+          "time": "09:00",
+          "score": 2.8569998741149902
+        },
+        {
+          "time": "09:30",
+          "score": 0.6672959923744202
+        }
+      ]
+    },
+    {
+      "physicalBlockIndex": 1,
+      "proposedTime": "13:00",
+      "confidence": 0.8199999928474426,
+      "requiresReview": false,
+      "distinctSupportColumns": 1,
+      "strongSupportColumns": 1,
+      "independentAtlasColumns": 0,
+      "reason": "fresh block evidence + learned mapping",
+      "alternatives": [
+        {
+          "time": "13:00",
+          "score": 5.785500526428223
+        }
+      ]
+    },
+    {
+      "physicalBlockIndex": 2,
+      "proposedTime": "09:00",
+      "confidence": 0.6125495433807373,
+      "requiresReview": true,
+      "distinctSupportColumns": 1,
+      "strongSupportColumns": 0,
+      "independentAtlasColumns": 0,
+      "reason": "weak structural block evidence",
+      "alternatives": [
+        {
+          "time": "09:00",
+          "score": 2.8569998741149902
+        },
+        {
+          "time": "16:00",
+          "score": 0.5736960172653198
+        }
+      ]
+    }
+  ],
+  "headerObservationCountsByWeekday": [
+    0,
+    0,
+    1,
+    9,
+    1,
+    9,
+    6
+  ],
+  "explicitHeaderObservationCountsByWeekday": [
+    0,
+    0,
+    0,
+    6,
+    1,
+    7,
+    4
+  ],
+  "timeCandidateTrace": [
+    {
+      "physicalBlockIndex": 0,
+      "weekdayColumn": 4,
+      "time": "09:00",
+      "source": "PAGE_OCR",
+      "strong": false,
+      "alternate": false,
+      "confidenceDecile": 3,
+      "geometryDecision": "eligible_for_solver"
+    },
+    {
+      "physicalBlockIndex": 0,
+      "weekdayColumn": 3,
+      "time": "09:00",
+      "source": "PAGE_OCR",
+      "strong": false,
+      "alternate": false,
+      "confidenceDecile": 3,
+      "geometryDecision": "outside_time_label_zone"
+    },
+    {
+      "physicalBlockIndex": 0,
+      "weekdayColumn": 3,
+      "time": "09:00",
+      "source": "PAGE_OCR",
+      "strong": false,
+      "alternate": false,
+      "confidenceDecile": 3,
+      "geometryDecision": "outside_time_label_zone"
+    },
+    {
+      "physicalBlockIndex": 0,
+      "weekdayColumn": 5,
+      "time": "10:00",
+      "source": "PAGE_OCR",
+      "strong": false,
+      "alternate": false,
+      "confidenceDecile": 3,
+      "geometryDecision": "outside_time_label_zone"
+    },
+    {
+      "physicalBlockIndex": 1,
+      "weekdayColumn": 0,
+      "time": "13:00",
+      "source": "PAGE_OCR",
+      "strong": true,
+      "alternate": false,
+      "confidenceDecile": 7,
+      "geometryDecision": "eligible_for_solver"
+    },
+    {
+      "physicalBlockIndex": 2,
+      "weekdayColumn": 4,
+      "time": "19:00",
+      "source": "PAGE_OCR",
+      "strong": false,
+      "alternate": false,
+      "confidenceDecile": 3,
+      "geometryDecision": "outside_time_label_zone"
+    },
+    {
+      "physicalBlockIndex": 2,
+      "weekdayColumn": 1,
+      "time": "19:00",
+      "source": "PAGE_OCR",
+      "strong": false,
+      "alternate": false,
+      "confidenceDecile": 3,
+      "geometryDecision": "outside_time_label_zone"
+    },
+    {
+      "physicalBlockIndex": 2,
+      "weekdayColumn": 3,
+      "time": "09:00",
+      "source": "PAGE_OCR",
+      "strong": false,
+      "alternate": false,
+      "confidenceDecile": 3,
+      "geometryDecision": "eligible_for_solver"
+    },
+    {
+      "physicalBlockIndex": 2,
+      "weekdayColumn": 5,
+      "time": "09:00",
+      "source": "PAGE_OCR",
+      "strong": false,
+      "alternate": false,
+      "confidenceDecile": 3,
+      "geometryDecision": "outside_time_label_zone"
+    },
+    {
+      "physicalBlockIndex": 2,
+      "weekdayColumn": 4,
+      "time": "10:00",
+      "source": "PAGE_OCR",
+      "strong": false,
+      "alternate": false,
+      "confidenceDecile": 3,
+      "geometryDecision": "outside_time_label_zone"
+    }
+  ],
+  "weekEvidenceComparison": {
+    "plannerFallback": {
+      "matchingObservations": 1,
+      "matchingExplicitObservations": 0,
+      "matchingDistinctWeekdayColumns": 1,
+      "totalObservations": 26
+    },
+    "displayedWeek": {
+      "matchingObservations": 1,
+      "matchingExplicitObservations": 0,
+      "matchingDistinctWeekdayColumns": 1,
+      "totalObservations": 26
+    },
+    "displayedWeekConfirmedByUser": false
+  },
+  "dateHypotheses": [
+    {
+      "source": "all_token_geometry",
+      "confidence": 0.47999998927116394,
+      "authoritative": false,
+      "evidenceCount": 26,
+      "explicitCount": 18,
+      "reason": "planner fallback; weak header evidence",
+      "offsetDaysFromPlannerFallback": 0
+    },
+    {
+      "source": "ordered_ocr_text",
+      "confidence": 0.25,
+      "authoritative": false,
+      "evidenceCount": 4,
+      "explicitCount": 4,
+      "reason": "no ordered consecutive header sequence",
+      "offsetDaysFromPlannerFallback": 0
+    },
+    {
+      "source": "focused_header_only",
+      "confidence": 0.47999998927116394,
+      "authoritative": false,
+      "evidenceCount": 8,
+      "explicitCount": 5,
+      "reason": "planner fallback; weak header evidence",
+      "offsetDaysFromPlannerFallback": 0
+    },
+    {
+      "source": "actual_review_resolution",
+      "confidence": 0.47999998927116394,
+      "authoritative": false,
+      "evidenceCount": 26,
+      "explicitCount": 18,
+      "reason": "planner fallback; document date evidence unresolved",
+      "offsetDaysFromPlannerFallback": 0
+    }
+  ],
+  "review": {
+    "draftCount": 0,
+    "selectedCount": 0,
+    "note": "Review drafts and blue viewer suggestions have distinct identities and must not be treated as the same set"
+  },
+  "viewerMarkers": {
+    "ocrNameHitsByWeekdayColumn": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "savedProfileStatus": "completed",
+    "recognitionRunId": "e911c2b8-abf3-463a-8ee1-49635e0827cf",
+    "recognitionLifecycle": "waited_for_final_scan",
+    "seededSearchStatus": "not_attempted",
+    "seededVisualDecisions": [],
+    "savedProfileDecisions": [
+      {
+        "weekdayColumn": 0,
+        "candidateLineCount": 18,
+        "scoredLineCount": 17,
+        "topScore": 0.6998975276947021,
+        "runnerScore": 0.438697874546051,
+        "acceptanceFloor": 0.550000011920929,
+        "confuserScore": 0.5843813419342041,
+        "decision": "accepted_normal",
+        "runnerOverlapFraction": 0,
+        "runnerIsSamePhysicalBlock": false,
+        "shadowOcr": {
+          "scoredCount": 15,
+          "best": {
+            "physicalBlockIndex": 0,
+            "verticalDecile": 2,
+            "adjustedScore": 0.6998975276947021,
+            "positiveScore": 0.6998975276947021,
+            "confuserScore": 0.5843813419342041
+          },
+          "scoredByBlock": {
+            "0": 11,
+            "1": 2,
+            "2": 2
+          }
+        },
+        "candidatePipeline": {
+          "strictCount": 13,
+          "looseObserved": 15,
+          "looseAdded": 2,
+          "eligibleOcrTokens": 22,
+          "ocrTokenDeciles": [
+            0,
+            9,
+            3,
+            0,
+            2,
+            5,
+            0,
+            0,
+            3,
+            0
+          ],
+          "ocrMerged": 21,
+          "ocrAdded": 1,
+          "probesAttempted": 31,
+          "probesNearExisting": 25,
+          "probesInkRejected": 2,
+          "probesAdded": 4,
+          "rejectedHeight": 0,
+          "rejectedBody": 2,
+          "finalCandidates": 18,
+          "finalOcrCandidates": 6,
+          "survivorsByBlock": {
+            "0": 8,
+            "1": 1,
+            "2": 9
+          },
+          "eligibleOcrTokensByBlock": {
+            "0": 12,
+            "1": 2,
+            "2": 5,
+            "3": 3
+          },
+          "ocrMergedByBlock": {
+            "0": 12,
+            "1": 2,
+            "2": 5,
+            "3": 2
+          },
+          "ocrAddedByBlock": {
+            "3": 1
+          }
+        },
+        "candidateSources": [
+          {
+            "origin": "ink_gap_probe",
+            "scoredCount": 11,
+            "strongestAdjustedScore": 0.438697874546051,
+            "strongestPositiveScore": 0.5586978793144226,
+            "strongestConfuserScore": 0.585972011089325,
+            "strongestPhysicalBlockIndex": 2
+          },
+          {
+            "origin": "ocr_token_band",
+            "scoredCount": 6,
+            "strongestAdjustedScore": 0.6998975276947021,
+            "strongestPositiveScore": 0.6998975276947021,
+            "strongestConfuserScore": 0.5843813419342041,
+            "strongestPhysicalBlockIndex": 0
+          }
+        ],
+        "productionByBlock": [
+          {
+            "physicalBlockIndex": 0,
+            "candidateCount": 8,
+            "best": {
+              "verticalDecile": 2,
+              "adjustedScore": 0.6998975276947021,
+              "positiveScore": 0.6998975276947021,
+              "confuserScore": 0.5843813419342041,
+              "rawSeparation": 0.11551618576049805,
+              "confuserPenalty": 0,
+              "separationAdjustment": 0,
+              "candidateOrigin": "ocr_token_band"
+            },
+            "runner": {
+              "verticalDecile": 3,
+              "adjustedScore": 0.41161084175109863,
+              "positiveScore": 0.5316108465194702,
+              "confuserScore": 0.5559824705123901,
+              "rawSeparation": -0.024371623992919922,
+              "confuserPenalty": 0,
+              "separationAdjustment": -0.11999999731779099,
+              "candidateOrigin": "ink_gap_probe"
+            },
+            "scoreMargin": 0.2882866859436035
+          },
+          {
+            "physicalBlockIndex": 1,
+            "candidateCount": 1,
+            "best": {
+              "verticalDecile": 4,
+              "adjustedScore": 0.3774202764034271,
+              "positiveScore": 0.4974202811717987,
+              "confuserScore": 0.534443736076355,
+              "rawSeparation": -0.037023454904556274,
+              "confuserPenalty": 0,
+              "separationAdjustment": -0.11999999731779099,
+              "candidateOrigin": "ocr_token_band"
+            },
+            "runner": null,
+            "scoreMargin": null
+          },
+          {
+            "physicalBlockIndex": 2,
+            "candidateCount": 8,
+            "best": {
+              "verticalDecile": 7,
+              "adjustedScore": 0.438697874546051,
+              "positiveScore": 0.5586978793144226,
+              "confuserScore": 0.585972011089325,
+              "rawSeparation": -0.027274131774902344,
+              "confuserPenalty": 0,
+              "separationAdjustment": -0.11999999731779099,
+              "candidateOrigin": "ink_gap_probe"
+            },
+            "runner": {
+              "verticalDecile": 6,
+              "adjustedScore": 0.42933398485183716,
+              "positiveScore": 0.5493339896202087,
+              "confuserScore": 0.5931285619735718,
+              "rawSeparation": -0.04379457235336304,
+              "confuserPenalty": 0,
+              "separationAdjustment": -0.11999999731779099,
+              "candidateOrigin": "ink_gap_probe"
+            },
+            "scoreMargin": 0.009363889694213867
+          }
+        ],
+        "shadowByBlock": [
+          {
+            "physicalBlockIndex": 0,
+            "candidateCount": 11,
+            "best": {
+              "verticalDecile": 2,
+              "adjustedScore": 0.6998975276947021,
+              "positiveScore": 0.6998975276947021,
+              "confuserScore": 0.5843813419342041,
+              "rawSeparation": 0.11551618576049805,
+              "confuserPenalty": 0,
+              "separationAdjustment": 0,
+              "candidateOrigin": "ocr_token_band"
+            },
+            "runner": {
+              "verticalDecile": 2,
+              "adjustedScore": 0.6998975276947021,
+              "positiveScore": 0.6998975276947021,
+              "confuserScore": 0.5843813419342041,
+              "rawSeparation": 0.11551618576049805,
+              "confuserPenalty": 0,
+              "separationAdjustment": 0,
+              "candidateOrigin": "ocr_token_band"
+            },
+            "scoreMargin": 0
+          },
+          {
+            "physicalBlockIndex": 1,
+            "candidateCount": 2,
+            "best": {
+              "verticalDecile": 4,
+              "adjustedScore": 0.38739442825317383,
+              "positiveScore": 0.5073944330215454,
+              "confuserScore": 0.5411226749420166,
+              "rawSeparation": -0.03372824192047119,
+              "confuserPenalty": 0,
+              "separationAdjustment": -0.11999999731779099,
+              "candidateOrigin": "ocr_token_band"
+            },
+            "runner": {
+              "verticalDecile": 4,
+              "adjustedScore": 0.3781892657279968,
+              "positiveScore": 0.4981892704963684,
+              "confuserScore": 0.5329691767692566,
+              "rawSeparation": -0.034779906272888184,
+              "confuserPenalty": 0,
+              "separationAdjustment": -0.11999999731779099,
+              "candidateOrigin": "ocr_token_band"
+            },
+            "scoreMargin": 0.009205162525177002
+          },
+          {
+            "physicalBlockIndex": 2,
+            "candidateCount": 2,
+            "best": {
+              "verticalDecile": 5,
+              "adjustedScore": 0.3855721354484558,
+              "positiveScore": 0.5566586256027222,
+              "confuserScore": 0.6751272082328796,
+              "rawSeparation": -0.11846858263015747,
+              "confuserPenalty": 0.051086485385894775,
+              "separationAdjustment": -0.11999999731779099,
+              "candidateOrigin": "ocr_token_band"
+            },
+            "runner": {
+              "verticalDecile": 5,
+              "adjustedScore": 0.3855087161064148,
+              "positiveScore": 0.5055087208747864,
+              "confuserScore": 0.5624860525131226,
+              "rawSeparation": -0.05697733163833618,
+              "confuserPenalty": 0,
+              "separationAdjustment": -0.11999999731779099,
+              "candidateOrigin": "ocr_token_band"
+            },
+            "scoreMargin": 6.341934204101562E-5
+          }
+        ],
+        "shadowReplay": {
+          "originalStatus": "accepted_normal",
+          "replayStatus": "accepted_normal",
+          "originalWinnerBlock": 0,
+          "replayWinnerBlock": 0,
+          "replayScore": 0.6998975276947021,
+          "replayRunner": 0.438697874546051,
+          "replayMargin": 0.2611996531486511,
+          "trimmedWinner": false,
+          "replayAccepted": true,
+          "decisionChanged": false,
+          "baselineParity": true
+        },
+        "cropExperiments": [
+          {
+            "physicalBlockIndex": 2,
+            "candidateRankInBlock": 1,
+            "candidateOrigin": "ink_gap_probe",
+            "verticalDecile": 7,
+            "overlapWithOtherTop": 0,
+            "selectiveTrimEligible": false,
+            "selectiveTrimQualifies": false,
+            "variants": [
+              {
+                "variant": "original",
+                "adjustedScore": 0.438697874546051,
+                "positiveScore": 0.5586978793144226,
+                "confuserScore": 0.585972011089325,
+                "rawSeparation": -0.027274131774902344,
+                "confuserPenalty": 0,
+                "separationAdjustment": -0.11999999731779099
+              },
+              {
+                "variant": "widen_28",
+                "adjustedScore": 0.40215927362442017,
+                "positiveScore": 0.5221592783927917,
+                "confuserScore": 0.5434926152229309,
+                "rawSeparation": -0.02133333683013916,
+                "confuserPenalty": 0,
+                "separationAdjustment": -0.11999999731779099
+              },
+              {
+                "variant": "widen_52",
+                "adjustedScore": 0.35855409502983093,
+                "positiveScore": 0.4785540997982025,
+                "confuserScore": 0.513861358165741,
+                "rawSeparation": -0.03530725836753845,
+                "confuserPenalty": 0,
+                "separationAdjustment": -0.11999999731779099
+              },
+              {
+                "variant": "trim_12",
+                "adjustedScore": 0.4396982192993164,
+                "positiveScore": 0.559698224067688,
+                "confuserScore": 0.5873138904571533,
+                "rawSeparation": -0.027615666389465332,
+                "confuserPenalty": 0,
+                "separationAdjustment": -0.11999999731779099
+              }
+            ]
+          },
+          {
+            "physicalBlockIndex": 2,
+            "candidateRankInBlock": 2,
+            "candidateOrigin": "ink_gap_probe",
+            "verticalDecile": 6,
+            "overlapWithOtherTop": 0,
+            "selectiveTrimEligible": false,
+            "selectiveTrimQualifies": false,
+            "variants": [
+              {
+                "variant": "original",
+                "adjustedScore": 0.42933398485183716,
+                "positiveScore": 0.5493339896202087,
+                "confuserScore": 0.5931285619735718,
+                "rawSeparation": -0.04379457235336304,
+                "confuserPenalty": 0,
+                "separationAdjustment": -0.11999999731779099
+              },
+              {
+                "variant": "widen_28",
+                "adjustedScore": 0.43042659759521484,
+                "positiveScore": 0.5504266023635864,
+                "confuserScore": 0.5943242311477661,
+                "rawSeparation": -0.04389762878417969,
+                "confuserPenalty": 0,
+                "separationAdjustment": -0.11999999731779099
+              },
+              {
+                "variant": "widen_52",
+                "adjustedScore": 0.3542152941226959,
+                "positiveScore": 0.4742152988910675,
+                "confuserScore": 0.4964861571788788,
+                "rawSeparation": -0.02227085828781128,
+                "confuserPenalty": 0,
+                "separationAdjustment": -0.11999999731779099
+              },
+              {
+                "variant": "trim_12",
+                "adjustedScore": 0.42909300327301025,
+                "positiveScore": 0.5490930080413818,
+                "confuserScore": 0.5906098484992981,
+                "rawSeparation": -0.04151684045791626,
+                "confuserPenalty": 0,
+                "separationAdjustment": -0.11999999731779099
+              }
+            ]
+          }
+        ],
+        "topCandidates": [
+          {
+            "rank": 1,
+            "physicalBlockIndex": 0,
+            "verticalDecile": 2,
+            "adjustedScore": 0.6998975276947021,
+            "positiveScore": 0.6998975276947021,
+            "confuserScore": 0.5843813419342041,
+            "rawSeparation": 0.11551618576049805,
+            "confuserPenalty": 0,
+            "separationAdjustment": 0,
+            "candidateOrigin": "ocr_token_band"
+          },
+          {
+            "rank": 2,
+            "physicalBlockIndex": 2,
+            "verticalDecile": 7,
+            "adjustedScore": 0.438697874546051,
+            "positiveScore": 0.5586978793144226,
+            "confuserScore": 0.585972011089325,
+            "rawSeparation": -0.027274131774902344,
+            "confuserPenalty": 0,
+            "separationAdjustment": -0.11999999731779099,
+            "candidateOrigin": "ink_gap_probe"
+          },
+          {
+            "rank": 3,
+            "physicalBlockIndex": 2,
+            "verticalDecile": 6,
+            "adjustedScore": 0.42933398485183716,
+            "positiveScore": 0.5493339896202087,
+            "confuserScore": 0.5931285619735718,
+            "rawSeparation": -0.04379457235336304,
+            "confuserPenalty": 0,
+            "separationAdjustment": -0.11999999731779099,
+            "candidateOrigin": "ink_gap_probe"
+          }
+        ]
+      },
+      {
+        "weekdayColumn": 1,
+        "candidateLineCount": 26,
+        "scoredLineCount": 24,
+        "topScore": 0.7917035818099976,
+        "runnerScore": 0.4045984148979187,
+        "acceptanceFloor": 0.550000011920929,
+        "confuserScore": 0.5604320764541626,
+        "decision": "accepted_normal",
+        "runnerOverlapFraction": 0,
+        "runnerIsSamePhysicalBlock": true,
+        "shadowOcr": {
+          "scoredCount": 4,
+          "best": {
+            "physicalBlockIndex": 2,
+            "verticalDecile": 5,
+            "adjustedScore": 0.4385533928871155,
+            "positiveScore": 0.5880736112594604,
+            "confuserScore": 0.6434121131896973
+          },
+          "scoredByBlock": {
+            "0": 1,
+            "2": 3
+          }
+        },
+        "candidatePipeline": {
+          "strictCount": 7,
+          "looseObserved": 3,
+          "looseAdded": 3,
+          "eligibleOcrTokens": 10,
+          "ocrTokenDeciles": [
+            0,
+            3,
+            0,
+            0,
+            0,
+            3,
+            0,
+            1,
+            1,
+            2
+          ],
+          "ocrMerged": 7,
+          "ocrAdded": 3,
+          "probesAttempted": 36,
+          "probesNearExisting": 17,
+          "probesInkRejected": 3,
+          "probesAdded": 16,
+          "rejectedHeight": 0,
+          "rejectedBody": 3,
+          "finalCandidates": 26,
+          "finalOcrCandidates": 4,
+          "survivorsByBlock": {
+            "0": 8,
+            "1": 4,
+            "2": 14
+          },
+          "eligibleOcrTokensByBlock": {
+            "0": 3,
+            "2": 4,
+            "3": 3
+          },
+          "ocrMergedByBlock": {
+            "0": 3,
+            "2": 3,
+            "3": 1
+          },
+          "ocrAddedByBlock": {
+            "2": 1,
+            "3": 2
+          }
+        },
+        "candidateSources": [
+          {
+            "origin": "ink_gap_probe",
+            "scoredCount": 20,
+            "strongestAdjustedScore": 0.39158451557159424,
+            "strongestPositiveScore": 0.5115845203399658,
+            "strongestConfuserScore": 0.5470620393753052,
+            "strongestPhysicalBlockIndex": 1
+          },
+          {
+            "origin": "ocr_token_band",
+            "scoredCount": 4,
+            "strongestAdjustedScore": 0.7917035818099976,
+            "strongestPositiveScore": 0.7667036056518555,
+            "strongestConfuserScore": 0.5604320764541626,
+            "strongestPhysicalBlockIndex": 2
+          }
+        ],
+        "productionByBlock": [
+          {
+            "physicalBlockIndex": 0,
+            "candidateCount": 8,
+            "best": {
+              "verticalDecile": 1,
+              "adjustedScore": 0.3866990804672241,
+              "positiveScore": 0.5066990852355957,
+              "confuserScore": 0.5312641859054565,
+              "rawSeparation": -0.02456510066986084,
+              "confuserPenalty": 0,
+              "separationAdjustment": -0.11999999731779099,
+              "candidateOrigin": "ink_gap_probe"
+            },
+            "runner": {
+              "verticalDecile": 3,
+              "adjustedScore": 0.3733871877193451,
+              "positiveScore": 0.4933871924877167,
+              "confuserScore": 0.5371199250221252,
+              "rawSeparation": -0.04373273253440857,
+              "confuserPenalty": 0,
+              "separationAdjustment": -0.11999999731779099,
+              "candidateOrigin": "ink_gap_probe"
+            },
+            "scoreMargin": 0.013311892747879028
+          },
+          {
+            "physicalBlockIndex": 1,
+            "candidateCount": 4,
+            "best": {
+              "verticalDecile": 4,
+              "adjustedScore": 0.39158451557159424,
+              "positiveScore": 0.5115845203399658,
+              "confuserScore": 0.5470620393753052,
+              "rawSeparation": -0.035477519035339355,
+              "confuserPenalty": 0,
+              "separationAdjustment": -0.11999999731779099,
+              "candidateOrigin": "ink_gap_probe"
+            },
+            "runner": {
+              "verticalDecile": 4,
+              "adjustedScore": 0.3136710822582245,
+              "positiveScore": 0.43367108702659607,
+              "confuserScore": 0.5953369140625,
+              "rawSeparation": -0.16166582703590393,
+              "confuserPenalty": 0,
+              "separationAdjustment": -0.11999999731779099,
+              "candidateOrigin": "ink_gap_probe"
+            },
+            "scoreMargin": 0.07791343331336975
+          },
+          {
+            "physicalBlockIndex": 2,
+            "candidateCount": 12,
+            "best": {
+              "verticalDecile": 7,
+              "adjustedScore": 0.7917035818099976,
+              "positiveScore": 0.7667036056518555,
+              "confuserScore": 0.5604320764541626,
+              "rawSeparation": 0.20627152919769287,
+              "confuserPenalty": 0,
+              "separationAdjustment": 0.02500000037252903,
+              "candidateOrigin": "ocr_token_band"
+            },
+            "runner": {
+              "verticalDecile": 5,
+              "adjustedScore": 0.4045984148979187,
+              "positiveScore": 0.586411714553833,
+              "confuserScore": 0.6909019351005554,
+              "rawSeparation": -0.10449022054672241,
+              "confuserPenalty": 0.06181329861283302,
+              "separationAdjustment": -0.11999999731779099,
+              "candidateOrigin": "ocr_token_band"
+            },
+            "scoreMargin": 0.38710516691207886
+          }
+        ],
+        "shadowByBlock": [
+          {
+            "physicalBlockIndex": 0,
+            "candidateCount": 1,
+            "best": {
+              "verticalDecile": 1,
+              "adjustedScore": 0.33991679549217224,
+              "positiveScore": 0.5100327730178833,
+              "confuserScore": 0.6736999750137329,
+              "rawSeparation": -0.1636672019958496,
+              "confuserPenalty": 0.05011596903204918,
+              "separationAdjustment": -0.11999999731779099,
+              "candidateOrigin": "ocr_token_band"
+            },
+            "runner": null,
+            "scoreMargin": null
+          },
+          {
+            "physicalBlockIndex": 2,
+            "candidateCount": 3,
+            "best": {
+              "verticalDecile": 5,
+              "adjustedScore": 0.4385533928871155,
+              "positiveScore": 0.5880736112594604,
+              "confuserScore": 0.6434121131896973,
+              "rawSeparation": -0.055338501930236816,
+              "confuserPenalty": 0.029520221054553986,
+              "separationAdjustment": -0.11999999731779099,
+              "candidateOrigin": "ocr_token_band"
+            },
+            "runner": {
+              "verticalDecile": 5,
+              "adjustedScore": 0.41059285402297974,
+              "positiveScore": 0.5712224841117859,
+              "confuserScore": 0.6597495079040527,
+              "rawSeparation": -0.08852702379226685,
+              "confuserPenalty": 0.04062965139746666,
+              "separationAdjustment": -0.11999999731779099,
+              "candidateOrigin": "ocr_token_band"
+            },
+            "scoreMargin": 0.027960538864135742
+          }
+        ],
+        "shadowReplay": {
+          "originalStatus": "accepted_normal",
+          "replayStatus": "accepted_normal",
+          "originalWinnerBlock": 2,
+          "replayWinnerBlock": 2,
+          "replayScore": 0.7917035818099976,
+          "replayRunner": 0.4045984148979187,
+          "replayMargin": 0.38710516691207886,
+          "trimmedWinner": false,
+          "replayAccepted": true,
+          "decisionChanged": false,
+          "baselineParity": true
+        },
+        "cropExperiments": [
+          {
+            "physicalBlockIndex": 2,
+            "candidateRankInBlock": 1,
+            "candidateOrigin": "ocr_token_band",
+            "verticalDecile": 7,
+            "overlapWithOtherTop": 0,
+            "selectiveTrimEligible": false,
+            "selectiveTrimQualifies": false,
+            "variants": [
+              {
+                "variant": "original",
+                "adjustedScore": 0.7917035818099976,
+                "positiveScore": 0.7667036056518555,
+                "confuserScore": 0.5604320764541626,
+                "rawSeparation": 0.20627152919769287,
+                "confuserPenalty": 0,
+                "separationAdjustment": 0.02500000037252903
+              },
+              {
+                "variant": "widen_28",
+                "adjustedScore": 0.5870038270950317,
+                "positiveScore": 0.5870038270950317,
+                "confuserScore": 0.5234699845314026,
+                "rawSeparation": 0.06353384256362915,
+                "confuserPenalty": 0,
+                "separationAdjustment": 0
+              },
+              {
+                "variant": "widen_52",
+                "adjustedScore": 0.5339500308036804,
+                "positiveScore": 0.5339500308036804,
+                "confuserScore": 0.4873195290565491,
+                "rawSeparation": 0.04663050174713135,
+                "confuserPenalty": 0,
+                "separationAdjustment": 0
+              },
+              {
+                "variant": "trim_12",
+                "adjustedScore": 0.6320927143096924,
+                "positiveScore": 0.6320927143096924,
+                "confuserScore": 0.5574851036071777,
+                "rawSeparation": 0.07460761070251465,
+                "confuserPenalty": 0,
+                "separationAdjustment": 0
+              }
+            ]
+          },
+          {
+            "physicalBlockIndex": 2,
+            "candidateRankInBlock": 2,
+            "candidateOrigin": "ocr_token_band",
+            "verticalDecile": 5,
+            "overlapWithOtherTop": 0,
+            "selectiveTrimEligible": false,
+            "selectiveTrimQualifies": false,
+            "variants": [
+              {
+                "variant": "original",
+                "adjustedScore": 0.4045984148979187,
+                "positiveScore": 0.586411714553833,
+                "confuserScore": 0.6909019351005554,
+                "rawSeparation": -0.10449022054672241,
+                "confuserPenalty": 0.06181329861283302,
+                "separationAdjustment": -0.11999999731779099
+              },
+              {
+                "variant": "widen_28",
+                "adjustedScore": 0.42937958240509033,
+                "positiveScore": 0.5493795871734619,
+                "confuserScore": 0.5582097172737122,
+                "rawSeparation": -0.008830130100250244,
+                "confuserPenalty": 0,
+                "separationAdjustment": -0.11999999731779099
+              },
+              {
+                "variant": "widen_52",
+                "adjustedScore": 0.39737123250961304,
+                "positiveScore": 0.5173712372779846,
+                "confuserScore": 0.5363269448280334,
+                "rawSeparation": -0.018955707550048828,
+                "confuserPenalty": 0,
+                "separationAdjustment": -0.11999999731779099
+              },
+              {
+                "variant": "trim_12",
+                "adjustedScore": 0.4282485246658325,
+                "positiveScore": 0.5599173903465271,
+                "confuserScore": 0.6171600818634033,
+                "rawSeparation": -0.05724269151687622,
+                "confuserPenalty": 0.011668839491903782,
+                "separationAdjustment": -0.11999999731779099
+              }
+            ]
+          }
+        ],
+        "topCandidates": [
+          {
+            "rank": 1,
+            "physicalBlockIndex": 2,
+            "verticalDecile": 7,
+            "adjustedScore": 0.7917035818099976,
+            "positiveScore": 0.7667036056518555,
+            "confuserScore": 0.5604320764541626,
+            "rawSeparation": 0.20627152919769287,
+            "confuserPenalty": 0,
+            "separationAdjustment": 0.02500000037252903,
+            "candidateOrigin": "ocr_token_band"
+          },
+          {
+            "rank": 2,
+            "physicalBlockIndex": 2,
+            "verticalDecile": 5,
+            "adjustedScore": 0.4045984148979187,
+            "positiveScore": 0.586411714553833,
+            "confuserScore": 0.6909019351005554,
+            "rawSeparation": -0.10449022054672241,
+            "confuserPenalty": 0.06181329861283302,
+            "separationAdjustment": -0.11999999731779099,
+            "candidateOrigin": "ocr_token_band"
+          },
+          {
+            "rank": 3,
+            "physicalBlockIndex": 1,
+            "verticalDecile": 4,
+            "adjustedScore": 0.39158451557159424,
+            "positiveScore": 0.5115845203399658,
+            "confuserScore": 0.5470620393753052,
+            "rawSeparation": -0.035477519035339355,
+            "confuserPenalty": 0,
+            "separationAdjustment": -0.11999999731779099,
+            "candidateOrigin": "ink_gap_probe"
+          }
+        ]
+      },
+      {
+        "weekdayColumn": 2,
+        "candidateLineCount": 28,
+        "scoredLineCount": 24,
+        "topScore": 0.42918938398361206,
+        "runnerScore": 0.421853244304657,
+        "acceptanceFloor": 0.550000011920929,
+        "confuserScore": 0.5183247327804565,
+        "decision": "rejected_below_rescue_floor",
+        "runnerOverlapFraction": 0,
+        "runnerIsSamePhysicalBlock": false,
+        "shadowOcr": {
+          "scoredCount": 6,
+          "best": {
+            "physicalBlockIndex": 2,
+            "verticalDecile": 7,
+            "adjustedScore": 0.42918938398361206,
+            "positiveScore": 0.5491893887519836,
+            "confuserScore": 0.5183247327804565
+          },
+          "scoredByBlock": {
+            "0": 5,
+            "2": 1
+          }
+        },
+        "candidatePipeline": {
+          "strictCount": 8,
+          "looseObserved": 10,
+          "looseAdded": 6,
+          "eligibleOcrTokens": 8,
+          "ocrTokenDeciles": [
+            0,
+            5,
+            0,
+            1,
+            0,
+            0,
+            0,
+            1,
+            1,
+            0
+          ],
+          "ocrMerged": 7,
+          "ocrAdded": 1,
+          "probesAttempted": 35,
+          "probesNearExisting": 20,
+          "probesInkRejected": 0,
+          "probesAdded": 15,
+          "rejectedHeight": 0,
+          "rejectedBody": 2,
+          "finalCandidates": 28,
+          "finalOcrCandidates": 4,
+          "survivorsByBlock": {
+            "0": 10,
+            "1": 3,
+            "2": 15
+          },
+          "eligibleOcrTokensByBlock": {
+            "0": 6,
+            "2": 2
+          },
+          "ocrMergedByBlock": {
+            "0": 6,
+            "2": 1
+          },
+          "ocrAddedByBlock": {
+            "2": 1
+          }
+        },
+        "candidateSources": [
+          {
+            "origin": "ink_gap_probe",
+            "scoredCount": 20,
+            "strongestAdjustedScore": 0.421853244304657,
+            "strongestPositiveScore": 0.5418532490730286,
+            "strongestConfuserScore": 0.5583341717720032,
+            "strongestPhysicalBlockIndex": 0
+          },
+          {
+            "origin": "ocr_token_band",
+            "scoredCount": 4,
+            "strongestAdjustedScore": 0.42918938398361206,
+            "strongestPositiveScore": 0.5491893887519836,
+            "strongestConfuserScore": 0.5183247327804565,
+            "strongestPhysicalBlockIndex": 2
+          }
+        ],
+        "productionByBlock": [
+          {
+            "physicalBlockIndex": 0,
+            "candidateCount": 8,
+            "best": {
+              "verticalDecile": 1,
+              "adjustedScore": 0.421853244304657,
+              "positiveScore": 0.5418532490730286,
+              "confuserScore": 0.5583341717720032,
+              "rawSeparation": -0.01648092269897461,
+              "confuserPenalty": 0,
+              "separationAdjustment": -0.11999999731779099,
+              "candidateOrigin": "ink_gap_probe"
+            },
+            "runner": {
+              "verticalDecile": 1,
+              "adjustedScore": 0.3943597078323364,
+              "positiveScore": 0.514359712600708,
+              "confuserScore": 0.57658851146698,
+              "rawSeparation": -0.06222879886627197,
+              "confuserPenalty": 0,
+              "separationAdjustment": -0.11999999731779099,
+              "candidateOrigin": "ocr_token_band"
+            },
+            "scoreMargin": 0.027493536472320557
+          },
+          {
+            "physicalBlockIndex": 1,
+            "candidateCount": 3,
+            "best": {
+              "verticalDecile": 4,
+              "adjustedScore": 0.38281047344207764,
+              "positiveScore": 0.5028104782104492,
+              "confuserScore": 0.5482470989227295,
+              "rawSeparation": -0.04543662071228027,
+              "confuserPenalty": 0,
+              "separationAdjustment": -0.11999999731779099,
+              "candidateOrigin": "ink_gap_probe"
+            },
+            "runner": {
+              "verticalDecile": 3,
+              "adjustedScore": 0.33625519275665283,
+              "positiveScore": 0.4562551975250244,
+              "confuserScore": 0.5715803503990173,
+              "rawSeparation": -0.11532515287399292,
+              "confuserPenalty": 0,
+              "separationAdjustment": -0.11999999731779099,
+              "candidateOrigin": "ink_gap_probe"
+            },
+            "scoreMargin": 0.046555280685424805
+          },
+          {
+            "physicalBlockIndex": 2,
+            "candidateCount": 13,
+            "best": {
+              "verticalDecile": 7,
+              "adjustedScore": 0.42918938398361206,
+              "positiveScore": 0.5491893887519836,
+              "confuserScore": 0.5183247327804565,
+              "rawSeparation": 0.0308646559715271,
+              "confuserPenalty": 0,
+              "separationAdjustment": -0.11999999731779099,
+              "candidateOrigin": "ocr_token_band"
+            },
+            "runner": {
+              "verticalDecile": 5,
+              "adjustedScore": 0.4041096568107605,
+              "positiveScore": 0.5241096615791321,
+              "confuserScore": 0.5822290778160095,
+              "rawSeparation": -0.05811941623687744,
+              "confuserPenalty": 0,
+              "separationAdjustment": -0.11999999731779099,
+              "candidateOrigin": "ink_gap_probe"
+            },
+            "scoreMargin": 0.025079727172851562
+          }
+        ],
+        "shadowByBlock": [
+          {
+            "physicalBlockIndex": 0,
+            "candidateCount": 5,
+            "best": {
+              "verticalDecile": 1,
+              "adjustedScore": 0.411887526512146,
+              "positiveScore": 0.5318875312805176,
+              "confuserScore": 0.5892531871795654,
+              "rawSeparation": -0.05736565589904785,
+              "confuserPenalty": 0,
+              "separationAdjustment": -0.11999999731779099,
+              "candidateOrigin": "ocr_token_band"
+            },
+            "runner": {
+              "verticalDecile": 1,
+              "adjustedScore": 0.411887526512146,
+              "positiveScore": 0.5318875312805176,
+              "confuserScore": 0.5892531871795654,
+              "rawSeparation": -0.05736565589904785,
+              "confuserPenalty": 0,
+              "separationAdjustment": -0.11999999731779099,
+              "candidateOrigin": "ocr_token_band"
+            },
+            "scoreMargin": 0
+          },
+          {
+            "physicalBlockIndex": 2,
+            "candidateCount": 1,
+            "best": {
+              "verticalDecile": 7,
+              "adjustedScore": 0.42918938398361206,
+              "positiveScore": 0.5491893887519836,
+              "confuserScore": 0.5183247327804565,
+              "rawSeparation": 0.0308646559715271,
+              "confuserPenalty": 0,
+              "separationAdjustment": -0.11999999731779099,
+              "candidateOrigin": "ocr_token_band"
+            },
+            "runner": null,
+            "scoreMargin": null
+          }
+        ],
+        "shadowReplay": {
+          "originalStatus": "rejected_below_rescue_floor",
+          "replayStatus": "rejected_below_rescue_floor",
+          "originalWinnerBlock": 2,
+          "replayWinnerBlock": 2,
+          "replayScore": 0.42918938398361206,
+          "replayRunner": 0.421853244304657,
+          "replayMargin": 0.007336139678955078,
+          "trimmedWinner": false,
+          "replayAccepted": false,
+          "decisionChanged": false,
+          "baselineParity": true
+        },
+        "cropExperiments": [
+          {
+            "physicalBlockIndex": 2,
+            "candidateRankInBlock": 1,
+            "candidateOrigin": "ocr_token_band",
+            "verticalDecile": 7,
+            "overlapWithOtherTop": 0,
+            "selectiveTrimEligible": false,
+            "selectiveTrimQualifies": false,
+            "variants": [
+              {
+                "variant": "original",
+                "adjustedScore": 0.42918938398361206,
+                "positiveScore": 0.5491893887519836,
+                "confuserScore": 0.5183247327804565,
+                "rawSeparation": 0.0308646559715271,
+                "confuserPenalty": 0,
+                "separationAdjustment": -0.11999999731779099
+              },
+              {
+                "variant": "widen_28",
+                "adjustedScore": 0.38864386081695557,
+                "positiveScore": 0.5086438655853271,
+                "confuserScore": 0.5026108026504517,
+                "rawSeparation": 0.006033062934875488,
+                "confuserPenalty": 0,
+                "separationAdjustment": -0.11999999731779099
+              },
+              {
+                "variant": "widen_52",
+                "adjustedScore": 0.35897114872932434,
+                "positiveScore": 0.4789711534976959,
+                "confuserScore": 0.4923988878726959,
+                "rawSeparation": -0.013427734375,
+                "confuserPenalty": 0,
+                "separationAdjustment": -0.11999999731779099
+              },
+              {
+                "variant": "trim_12",
+                "adjustedScore": 0.4326595067977905,
+                "positiveScore": 0.5526595115661621,
+                "confuserScore": 0.5203927159309387,
+                "rawSeparation": 0.03226679563522339,
+                "confuserPenalty": 0,
+                "separationAdjustment": -0.11999999731779099
+              }
+            ]
+          },
+          {
+            "physicalBlockIndex": 2,
+            "candidateRankInBlock": 2,
+            "candidateOrigin": "ink_gap_probe",
+            "verticalDecile": 5,
+            "overlapWithOtherTop": 0,
+            "selectiveTrimEligible": false,
+            "selectiveTrimQualifies": false,
+            "variants": [
+              {
+                "variant": "original",
+                "adjustedScore": 0.4041096568107605,
+                "positiveScore": 0.5241096615791321,
+                "confuserScore": 0.5822290778160095,
+                "rawSeparation": -0.05811941623687744,
+                "confuserPenalty": 0,
+                "separationAdjustment": -0.11999999731779099
+              },
+              {
+                "variant": "widen_28",
+                "adjustedScore": 0.40370047092437744,
+                "positiveScore": 0.523700475692749,
+                "confuserScore": 0.5333070755004883,
+                "rawSeparation": -0.009606599807739258,
+                "confuserPenalty": 0,
+                "separationAdjustment": -0.11999999731779099
+              },
+              {
+                "variant": "widen_52",
+                "adjustedScore": 0.38538873195648193,
+                "positiveScore": 0.5053887367248535,
+                "confuserScore": 0.5226216316223145,
+                "rawSeparation": -0.017232894897460938,
+                "confuserPenalty": 0,
+                "separationAdjustment": -0.11999999731779099
+              },
+              {
+                "variant": "trim_12",
+                "adjustedScore": 0.4159957766532898,
+                "positiveScore": 0.5359957814216614,
+                "confuserScore": 0.5828763246536255,
+                "rawSeparation": -0.04688054323196411,
+                "confuserPenalty": 0,
+                "separationAdjustment": -0.11999999731779099
+              }
+            ]
+          }
+        ],
+        "topCandidates": [
+          {
+            "rank": 1,
+            "physicalBlockIndex": 2,
+            "verticalDecile": 7,
+            "adjustedScore": 0.42918938398361206,
+            "positiveScore": 0.5491893887519836,
+            "confuserScore": 0.5183247327804565,
+            "rawSeparation": 0.0308646559715271,
+            "confuserPenalty": 0,
+            "separationAdjustment": -0.11999999731779099,
+            "candidateOrigin": "ocr_token_band"
+          },
+          {
+            "rank": 2,
+            "physicalBlockIndex": 0,
+            "verticalDecile": 1,
+            "adjustedScore": 0.421853244304657,
+            "positiveScore": 0.5418532490730286,
+            "confuserScore": 0.5583341717720032,
+            "rawSeparation": -0.01648092269897461,
+            "confuserPenalty": 0,
+            "separationAdjustment": -0.11999999731779099,
+            "candidateOrigin": "ink_gap_probe"
+          },
+          {
+            "rank": 3,
+            "physicalBlockIndex": 2,
+            "verticalDecile": 5,
+            "adjustedScore": 0.4041096568107605,
+            "positiveScore": 0.5241096615791321,
+            "confuserScore": 0.5822290778160095,
+            "rawSeparation": -0.05811941623687744,
+            "confuserPenalty": 0,
+            "separationAdjustment": -0.11999999731779099,
+            "candidateOrigin": "ink_gap_probe"
+          }
+        ]
+      },
+      {
+        "weekdayColumn": 3,
+        "candidateLineCount": 23,
+        "scoredLineCount": 23,
+        "topScore": 0.7969909310340881,
+        "runnerScore": 0.583224356174469,
+        "acceptanceFloor": 0.550000011920929,
+        "confuserScore": 0.5586443543434143,
+        "decision": "accepted_normal",
+        "runnerOverlapFraction": 0.3188405930995941,
+        "runnerIsSamePhysicalBlock": true,
+        "shadowOcr": {
+          "scoredCount": 21,
+          "best": {
+            "physicalBlockIndex": 0,
+            "verticalDecile": 1,
+            "adjustedScore": 0.46537381410598755,
+            "positiveScore": 0.5853738188743591,
+            "confuserScore": 0.5537425875663757
+          },
+          "scoredByBlock": {
+            "0": 15,
+            "2": 6
+          }
+        },
+        "candidatePipeline": {
+          "strictCount": 10,
+          "looseObserved": 0,
+          "looseAdded": 0,
+          "eligibleOcrTokens": 43,
+          "ocrTokenDeciles": [
+            0,
+            22,
+            8,
+            0,
+            0,
+            4,
+            5,
+            0,
+            4,
+            0
+          ],
+          "ocrMerged": 32,
+          "ocrAdded": 11,
+          "probesAttempted": 31,
+          "probesNearExisting": 24,
+          "probesInkRejected": 1,
+          "probesAdded": 6,
+          "rejectedHeight": 1,
+          "rejectedBody": 3,
+          "finalCandidates": 23,
+          "finalOcrCandidates": 11,
+          "survivorsByBlock": {
+            "0": 10,
+            "1": 3,
+            "2": 9,
+            "3": 1
+          },
+          "eligibleOcrTokensByBlock": {
+            "0": 30,
+            "2": 13
+          },
+          "ocrMergedByBlock": {
+            "0": 23,
+            "2": 9
+          },
+          "ocrAddedByBlock": {
+            "0": 7,
+            "2": 4
+          }
+        },
+        "candidateSources": [
+          {
+            "origin": "ink_gap_probe",
+            "scoredCount": 12,
+            "strongestAdjustedScore": 0.4289326071739197,
+            "strongestPositiveScore": 0.5489326119422913,
+            "strongestConfuserScore": 0.5620701313018799,
+            "strongestPhysicalBlockIndex": 2
+          },
+          {
+            "origin": "ocr_token_band",
+            "scoredCount": 11,
+            "strongestAdjustedScore": 0.7969909310340881,
+            "strongestPositiveScore": 0.771990954875946,
+            "strongestConfuserScore": 0.5586443543434143,
+            "strongestPhysicalBlockIndex": 2
+          }
+        ],
+        "productionByBlock": [
+          {
+            "physicalBlockIndex": 0,
+            "candidateCount": 10,
+            "best": {
+              "verticalDecile": 1,
+              "adjustedScore": 0.5672486424446106,
+              "positiveScore": 0.5672486424446106,
+              "confuserScore": 0.5145403146743774,
+              "rawSeparation": 0.052708327770233154,
+              "confuserPenalty": 0,
+              "separationAdjustment": 0,
+              "candidateOrigin": "ocr_token_band"
+            },
+            "runner": {
+              "verticalDecile": 2,
+              "adjustedScore": 0.4401005506515503,
+              "positiveScore": 0.5601005554199219,
+              "confuserScore": 0.5415444374084473,
+              "rawSeparation": 0.01855611801147461,
+              "confuserPenalty": 0,
+              "separationAdjustment": -0.11999999731779099,
+              "candidateOrigin": "ocr_token_band"
+            },
+            "scoreMargin": 0.1271480917930603
+          },
+          {
+            "physicalBlockIndex": 1,
+            "candidateCount": 3,
+            "best": {
+              "verticalDecile": 4,
+              "adjustedScore": 0.339759886264801,
+              "positiveScore": 0.4597598910331726,
+              "confuserScore": 0.5403648018836975,
+              "rawSeparation": -0.0806049108505249,
+              "confuserPenalty": 0,
+              "separationAdjustment": -0.11999999731779099,
+              "candidateOrigin": "ink_gap_probe"
+            },
+            "runner": {
+              "verticalDecile": 4,
+              "adjustedScore": 0.293133020401001,
+              "positiveScore": 0.41313302516937256,
+              "confuserScore": 0.499831885099411,
+              "rawSeparation": -0.08669885993003845,
+              "confuserPenalty": 0,
+              "separationAdjustment": -0.11999999731779099,
+              "candidateOrigin": "ink_gap_probe"
+            },
+            "scoreMargin": 0.04662686586380005
+          },
+          {
+            "physicalBlockIndex": 2,
+            "candidateCount": 9,
+            "best": {
+              "verticalDecile": 6,
+              "adjustedScore": 0.7969909310340881,
+              "positiveScore": 0.771990954875946,
+              "confuserScore": 0.5586443543434143,
+              "rawSeparation": 0.21334660053253174,
+              "confuserPenalty": 0,
+              "separationAdjustment": 0.02500000037252903,
+              "candidateOrigin": "ocr_token_band"
+            },
+            "runner": {
+              "verticalDecile": 6,
+              "adjustedScore": 0.583224356174469,
+              "positiveScore": 0.583224356174469,
+              "confuserScore": 0.5222338438034058,
+              "rawSeparation": 0.06099051237106323,
+              "confuserPenalty": 0,
+              "separationAdjustment": 0,
+              "candidateOrigin": "ocr_token_band"
+            },
+            "scoreMargin": 0.21376657485961914
+          },
+          {
+            "physicalBlockIndex": 3,
+            "candidateCount": 1,
+            "best": {
+              "verticalDecile": 8,
+              "adjustedScore": 0.25965824723243713,
+              "positiveScore": 0.3796582520008087,
+              "confuserScore": 0.5332716703414917,
+              "rawSeparation": -0.15361341834068298,
+              "confuserPenalty": 0,
+              "separationAdjustment": -0.11999999731779099,
+              "candidateOrigin": "ink_gap_probe"
+            },
+            "runner": null,
+            "scoreMargin": null
+          }
+        ],
+        "shadowByBlock": [
+          {
+            "physicalBlockIndex": 0,
+            "candidateCount": 15,
+            "best": {
+              "verticalDecile": 1,
+              "adjustedScore": 0.46537381410598755,
+              "positiveScore": 0.5853738188743591,
+              "confuserScore": 0.5537425875663757,
+              "rawSeparation": 0.0316312313079834,
+              "confuserPenalty": 0,
+              "separationAdjustment": -0.11999999731779099,
+              "candidateOrigin": "ocr_token_band"
+            },
+            "runner": {
+              "verticalDecile": 1,
+              "adjustedScore": 0.4564523696899414,
+              "positiveScore": 0.576452374458313,
+              "confuserScore": 0.5536829829216003,
+              "rawSeparation": 0.022769391536712646,
+              "confuserPenalty": 0,
+              "separationAdjustment": -0.11999999731779099,
+              "candidateOrigin": "ocr_token_band"
+            },
+            "scoreMargin": 0.008921444416046143
+          },
+          {
+            "physicalBlockIndex": 2,
+            "candidateCount": 6,
+            "best": {
+              "verticalDecile": 5,
+              "adjustedScore": 0.4445045590400696,
+              "positiveScore": 0.5645045638084412,
+              "confuserScore": 0.5573959350585938,
+              "rawSeparation": 0.007108628749847412,
+              "confuserPenalty": 0,
+              "separationAdjustment": -0.11999999731779099,
+              "candidateOrigin": "ocr_token_band"
+            },
+            "runner": {
+              "verticalDecile": 6,
+              "adjustedScore": 0.43699926137924194,
+              "positiveScore": 0.5569992661476135,
+              "confuserScore": 0.5517674088478088,
+              "rawSeparation": 0.0052318572998046875,
+              "confuserPenalty": 0,
+              "separationAdjustment": -0.11999999731779099,
+              "candidateOrigin": "ocr_token_band"
+            },
+            "scoreMargin": 0.007505297660827637
+          }
+        ],
+        "shadowReplay": {
+          "originalStatus": "accepted_normal",
+          "replayStatus": "accepted_normal",
+          "originalWinnerBlock": 2,
+          "replayWinnerBlock": 2,
+          "replayScore": 0.7969909310340881,
+          "replayRunner": 0.583224356174469,
+          "replayMargin": 0.21376657485961914,
+          "trimmedWinner": false,
+          "replayAccepted": true,
+          "decisionChanged": false,
+          "baselineParity": true
+        },
+        "cropExperiments": [
+          {
+            "physicalBlockIndex": 2,
+            "candidateRankInBlock": 1,
+            "candidateOrigin": "ocr_token_band",
+            "verticalDecile": 6,
+            "overlapWithOtherTop": 0.3188405930995941,
+            "selectiveTrimEligible": false,
+            "selectiveTrimQualifies": false,
+            "variants": [
+              {
+                "variant": "original",
+                "adjustedScore": 0.7969909310340881,
+                "positiveScore": 0.771990954875946,
+                "confuserScore": 0.5586443543434143,
+                "rawSeparation": 0.21334660053253174,
+                "confuserPenalty": 0,
+                "separationAdjustment": 0.02500000037252903
+              },
+              {
+                "variant": "widen_28",
+                "adjustedScore": 0.4371137022972107,
+                "positiveScore": 0.5571137070655823,
+                "confuserScore": 0.5202615261077881,
+                "rawSeparation": 0.03685218095779419,
+                "confuserPenalty": 0,
+                "separationAdjustment": -0.11999999731779099
+              },
+              {
+                "variant": "widen_52",
+                "adjustedScore": 0.3944207429885864,
+                "positiveScore": 0.514420747756958,
+                "confuserScore": 0.5189965963363647,
+                "rawSeparation": -0.004575848579406738,
+                "confuserPenalty": 0,
+                "separationAdjustment": -0.11999999731779099
+              },
+              {
+                "variant": "trim_12",
+                "adjustedScore": 0.6533879041671753,
+                "positiveScore": 0.6533879041671753,
+                "confuserScore": 0.5577645301818848,
+                "rawSeparation": 0.09562337398529053,
+                "confuserPenalty": 0,
+                "separationAdjustment": 0
+              }
+            ]
+          },
+          {
+            "physicalBlockIndex": 2,
+            "candidateRankInBlock": 2,
+            "candidateOrigin": "ocr_token_band",
+            "verticalDecile": 6,
+            "overlapWithOtherTop": 0.3188405930995941,
+            "selectiveTrimEligible": false,
+            "selectiveTrimQualifies": false,
+            "variants": [
+              {
+                "variant": "original",
+                "adjustedScore": 0.583224356174469,
+                "positiveScore": 0.583224356174469,
+                "confuserScore": 0.5222338438034058,
+                "rawSeparation": 0.06099051237106323,
+                "confuserPenalty": 0,
+                "separationAdjustment": 0
+              },
+              {
+                "variant": "widen_28",
+                "adjustedScore": 0.40305691957473755,
+                "positiveScore": 0.5230569243431091,
+                "confuserScore": 0.5270233750343323,
+                "rawSeparation": -0.0039664506912231445,
+                "confuserPenalty": 0,
+                "separationAdjustment": -0.11999999731779099
+              },
+              {
+                "variant": "widen_52",
+                "adjustedScore": 0.38660043478012085,
+                "positiveScore": 0.5066004395484924,
+                "confuserScore": 0.5096613764762878,
+                "rawSeparation": -0.00306093692779541,
+                "confuserPenalty": 0,
+                "separationAdjustment": -0.11999999731779099
+              },
+              {
+                "variant": "trim_12",
+                "adjustedScore": 0.4556516408920288,
+                "positiveScore": 0.5756516456604004,
+                "confuserScore": 0.5429039597511292,
+                "rawSeparation": 0.03274768590927124,
+                "confuserPenalty": 0,
+                "separationAdjustment": -0.11999999731779099
+              }
+            ]
+          }
+        ],
+        "topCandidates": [
+          {
+            "rank": 1,
+            "physicalBlockIndex": 2,
+            "verticalDecile": 6,
+            "adjustedScore": 0.7969909310340881,
+            "positiveScore": 0.771990954875946,
+            "confuserScore": 0.5586443543434143,
+            "rawSeparation": 0.21334660053253174,
+            "confuserPenalty": 0,
+            "separationAdjustment": 0.02500000037252903,
+            "candidateOrigin": "ocr_token_band"
+          },
+          {
+            "rank": 2,
+            "physicalBlockIndex": 2,
+            "verticalDecile": 6,
+            "adjustedScore": 0.583224356174469,
+            "positiveScore": 0.583224356174469,
+            "confuserScore": 0.5222338438034058,
+            "rawSeparation": 0.06099051237106323,
+            "confuserPenalty": 0,
+            "separationAdjustment": 0,
+            "candidateOrigin": "ocr_token_band"
+          },
+          {
+            "rank": 3,
+            "physicalBlockIndex": 0,
+            "verticalDecile": 1,
+            "adjustedScore": 0.5672486424446106,
+            "positiveScore": 0.5672486424446106,
+            "confuserScore": 0.5145403146743774,
+            "rawSeparation": 0.052708327770233154,
+            "confuserPenalty": 0,
+            "separationAdjustment": 0,
+            "candidateOrigin": "ocr_token_band"
+          }
+        ]
+      },
+      {
+        "weekdayColumn": 4,
+        "candidateLineCount": 22,
+        "scoredLineCount": 22,
+        "topScore": 0.43142086267471313,
+        "runnerScore": 0.4281962513923645,
+        "acceptanceFloor": 0.550000011920929,
+        "confuserScore": 0.5754666924476624,
+        "decision": "rejected_below_rescue_floor",
+        "runnerOverlapFraction": 0,
+        "runnerIsSamePhysicalBlock": true,
+        "shadowOcr": {
+          "scoredCount": 18,
+          "best": {
+            "physicalBlockIndex": 0,
+            "verticalDecile": 1,
+            "adjustedScore": 0.44015276432037354,
+            "positiveScore": 0.5601527690887451,
+            "confuserScore": 0.593441903591156
+          },
+          "scoredByBlock": {
+            "0": 12,
+            "2": 6
+          }
+        },
+        "candidatePipeline": {
+          "strictCount": 14,
+          "looseObserved": 18,
+          "looseAdded": 5,
+          "eligibleOcrTokens": 30,
+          "ocrTokenDeciles": [
+            0,
+            16,
+            2,
+            0,
+            0,
+            6,
+            3,
+            2,
+            1,
+            0
+          ],
+          "ocrMerged": 29,
+          "ocrAdded": 1,
+          "probesAttempted": 33,
+          "probesNearExisting": 25,
+          "probesInkRejected": 0,
+          "probesAdded": 8,
+          "rejectedHeight": 2,
+          "rejectedBody": 4,
+          "finalCandidates": 22,
+          "finalOcrCandidates": 6,
+          "survivorsByBlock": {
+            "0": 7,
+            "1": 3,
+            "2": 12
+          },
+          "eligibleOcrTokensByBlock": {
+            "0": 18,
+            "2": 12
+          },
+          "ocrMergedByBlock": {
+            "0": 18,
+            "2": 11
+          },
+          "ocrAddedByBlock": {
+            "2": 1
+          }
+        },
+        "candidateSources": [
+          {
+            "origin": "ink_gap_probe",
+            "scoredCount": 16,
+            "strongestAdjustedScore": 0.43142086267471313,
+            "strongestPositiveScore": 0.5514208674430847,
+            "strongestConfuserScore": 0.5754666924476624,
+            "strongestPhysicalBlockIndex": 2
+          },
+          {
+            "origin": "ocr_token_band",
+            "scoredCount": 6,
+            "strongestAdjustedScore": 0.4281962513923645,
+            "strongestPositiveScore": 0.5481962561607361,
+            "strongestConfuserScore": 0.5725869536399841,
+            "strongestPhysicalBlockIndex": 2
+          }
+        ],
+        "productionByBlock": [
+          {
+            "physicalBlockIndex": 0,
+            "candidateCount": 7,
+            "best": {
+              "verticalDecile": 2,
+              "adjustedScore": 0.408985435962677,
+              "positiveScore": 0.5289854407310486,
+              "confuserScore": 0.550728440284729,
+              "rawSeparation": -0.02174299955368042,
+              "confuserPenalty": 0,
+              "separationAdjustment": -0.11999999731779099,
+              "candidateOrigin": "ink_gap_probe"
+            },
+            "runner": {
+              "verticalDecile": 1,
+              "adjustedScore": 0.3990965485572815,
+              "positiveScore": 0.5190965533256531,
+              "confuserScore": 0.5385146141052246,
+              "rawSeparation": -0.019418060779571533,
+              "confuserPenalty": 0,
+              "separationAdjustment": -0.11999999731779099,
+              "candidateOrigin": "ocr_token_band"
+            },
+            "scoreMargin": 0.009888887405395508
+          },
+          {
+            "physicalBlockIndex": 1,
+            "candidateCount": 3,
+            "best": {
+              "verticalDecile": 4,
+              "adjustedScore": 0.3791499733924866,
+              "positiveScore": 0.49914997816085815,
+              "confuserScore": 0.5065388679504395,
+              "rawSeparation": -0.007388889789581299,
+              "confuserPenalty": 0,
+              "separationAdjustment": -0.11999999731779099,
+              "candidateOrigin": "ink_gap_probe"
+            },
+            "runner": {
+              "verticalDecile": 4,
+              "adjustedScore": 0.2969890236854553,
+              "positiveScore": 0.4169890284538269,
+              "confuserScore": 0.4628855884075165,
+              "rawSeparation": -0.045896559953689575,
+              "confuserPenalty": 0,
+              "separationAdjustment": -0.11999999731779099,
+              "candidateOrigin": "ink_gap_probe"
+            },
+            "scoreMargin": 0.08216094970703125
+          },
+          {
+            "physicalBlockIndex": 2,
+            "candidateCount": 12,
+            "best": {
+              "verticalDecile": 7,
+              "adjustedScore": 0.43142086267471313,
+              "positiveScore": 0.5514208674430847,
+              "confuserScore": 0.5754666924476624,
+              "rawSeparation": -0.024045825004577637,
+              "confuserPenalty": 0,
+              "separationAdjustment": -0.11999999731779099,
+              "candidateOrigin": "ink_gap_probe"
+            },
+            "runner": {
+              "verticalDecile": 8,
+              "adjustedScore": 0.4281962513923645,
+              "positiveScore": 0.5481962561607361,
+              "confuserScore": 0.5725869536399841,
+              "rawSeparation": -0.024390697479248047,
+              "confuserPenalty": 0,
+              "separationAdjustment": -0.11999999731779099,
+              "candidateOrigin": "ocr_token_band"
+            },
+            "scoreMargin": 0.003224611282348633
+          }
+        ],
+        "shadowByBlock": [
+          {
+            "physicalBlockIndex": 0,
+            "candidateCount": 12,
+            "best": {
+              "verticalDecile": 1,
+              "adjustedScore": 0.44015276432037354,
+              "positiveScore": 0.5601527690887451,
+              "confuserScore": 0.593441903591156,
+              "rawSeparation": -0.03328913450241089,
+              "confuserPenalty": 0,
+              "separationAdjustment": -0.11999999731779099,
+              "candidateOrigin": "ocr_token_band"
+            },
+            "runner": {
+              "verticalDecile": 1,
+              "adjustedScore": 0.43911975622177124,
+              "positiveScore": 0.5591197609901428,
+              "confuserScore": 0.5910465121269226,
+              "rawSeparation": -0.031926751136779785,
+              "confuserPenalty": 0,
+              "separationAdjustment": -0.11999999731779099,
+              "candidateOrigin": "ocr_token_band"
+            },
+            "scoreMargin": 0.001033008098602295
+          },
+          {
+            "physicalBlockIndex": 2,
+            "candidateCount": 6,
+            "best": {
+              "verticalDecile": 5,
+              "adjustedScore": 0.42965471744537354,
+              "positiveScore": 0.5496547222137451,
+              "confuserScore": 0.5570285320281982,
+              "rawSeparation": -0.007373809814453125,
+              "confuserPenalty": 0,
+              "separationAdjustment": -0.11999999731779099,
+              "candidateOrigin": "ocr_token_band"
+            },
+            "runner": {
+              "verticalDecile": 7,
+              "adjustedScore": 0.4266093969345093,
+              "positiveScore": 0.5466094017028809,
+              "confuserScore": 0.5757914781570435,
+              "rawSeparation": -0.029182076454162598,
+              "confuserPenalty": 0,
+              "separationAdjustment": -0.11999999731779099,
+              "candidateOrigin": "ocr_token_band"
+            },
+            "scoreMargin": 0.003045320510864258
+          }
+        ],
+        "shadowReplay": {
+          "originalStatus": "rejected_below_rescue_floor",
+          "replayStatus": "rejected_below_rescue_floor",
+          "originalWinnerBlock": 2,
+          "replayWinnerBlock": 2,
+          "replayScore": 0.43142086267471313,
+          "replayRunner": 0.4281962513923645,
+          "replayMargin": 0.003224611282348633,
+          "trimmedWinner": false,
+          "replayAccepted": false,
+          "decisionChanged": false,
+          "baselineParity": true
+        },
+        "cropExperiments": [
+          {
+            "physicalBlockIndex": 2,
+            "candidateRankInBlock": 1,
+            "candidateOrigin": "ink_gap_probe",
+            "verticalDecile": 7,
+            "overlapWithOtherTop": 0,
+            "selectiveTrimEligible": false,
+            "selectiveTrimQualifies": false,
+            "variants": [
+              {
+                "variant": "original",
+                "adjustedScore": 0.43142086267471313,
+                "positiveScore": 0.5514208674430847,
+                "confuserScore": 0.5754666924476624,
+                "rawSeparation": -0.024045825004577637,
+                "confuserPenalty": 0,
+                "separationAdjustment": -0.11999999731779099
+              },
+              {
+                "variant": "widen_28",
+                "adjustedScore": 0.3926340341567993,
+                "positiveScore": 0.5126340389251709,
+                "confuserScore": 0.5184592008590698,
+                "rawSeparation": -0.005825161933898926,
+                "confuserPenalty": 0,
+                "separationAdjustment": -0.11999999731779099
+              },
+              {
+                "variant": "widen_52",
+                "adjustedScore": 0.3378303647041321,
+                "positiveScore": 0.45783036947250366,
+                "confuserScore": 0.4870299696922302,
+                "rawSeparation": -0.029199600219726562,
+                "confuserPenalty": 0,
+                "separationAdjustment": -0.11999999731779099
+              },
+              {
+                "variant": "trim_12",
+                "adjustedScore": 0.430453360080719,
+                "positiveScore": 0.5504533648490906,
+                "confuserScore": 0.5729679465293884,
+                "rawSeparation": -0.02251458168029785,
+                "confuserPenalty": 0,
+                "separationAdjustment": -0.11999999731779099
+              }
+            ]
+          },
+          {
+            "physicalBlockIndex": 2,
+            "candidateRankInBlock": 2,
+            "candidateOrigin": "ocr_token_band",
+            "verticalDecile": 8,
+            "overlapWithOtherTop": 0,
+            "selectiveTrimEligible": false,
+            "selectiveTrimQualifies": false,
+            "variants": [
+              {
+                "variant": "original",
+                "adjustedScore": 0.4281962513923645,
+                "positiveScore": 0.5481962561607361,
+                "confuserScore": 0.5725869536399841,
+                "rawSeparation": -0.024390697479248047,
+                "confuserPenalty": 0,
+                "separationAdjustment": -0.11999999731779099
+              },
+              {
+                "variant": "widen_28",
+                "adjustedScore": 0.4097796082496643,
+                "positiveScore": 0.5297796130180359,
+                "confuserScore": 0.5441000461578369,
+                "rawSeparation": -0.014320433139801025,
+                "confuserPenalty": 0,
+                "separationAdjustment": -0.11999999731779099
+              },
+              {
+                "variant": "widen_52",
+                "adjustedScore": 0.3801022171974182,
+                "positiveScore": 0.5001022219657898,
+                "confuserScore": 0.5184847712516785,
+                "rawSeparation": -0.018382549285888672,
+                "confuserPenalty": 0,
+                "separationAdjustment": -0.11999999731779099
+              },
+              {
+                "variant": "trim_12",
+                "adjustedScore": 0.4148554801940918,
+                "positiveScore": 0.5348554849624634,
+                "confuserScore": 0.5514712929725647,
+                "rawSeparation": -0.01661580801010132,
+                "confuserPenalty": 0,
+                "separationAdjustment": -0.11999999731779099
+              }
+            ]
+          }
+        ],
+        "topCandidates": [
+          {
+            "rank": 1,
+            "physicalBlockIndex": 2,
+            "verticalDecile": 7,
+            "adjustedScore": 0.43142086267471313,
+            "positiveScore": 0.5514208674430847,
+            "confuserScore": 0.5754666924476624,
+            "rawSeparation": -0.024045825004577637,
+            "confuserPenalty": 0,
+            "separationAdjustment": -0.11999999731779099,
+            "candidateOrigin": "ink_gap_probe"
+          },
+          {
+            "rank": 2,
+            "physicalBlockIndex": 2,
+            "verticalDecile": 8,
+            "adjustedScore": 0.4281962513923645,
+            "positiveScore": 0.5481962561607361,
+            "confuserScore": 0.5725869536399841,
+            "rawSeparation": -0.024390697479248047,
+            "confuserPenalty": 0,
+            "separationAdjustment": -0.11999999731779099,
+            "candidateOrigin": "ocr_token_band"
+          },
+          {
+            "rank": 3,
+            "physicalBlockIndex": 2,
+            "verticalDecile": 7,
+            "adjustedScore": 0.4266093969345093,
+            "positiveScore": 0.5466094017028809,
+            "confuserScore": 0.5757914781570435,
+            "rawSeparation": -0.029182076454162598,
+            "confuserPenalty": 0,
+            "separationAdjustment": -0.11999999731779099,
+            "candidateOrigin": "ocr_token_band"
+          }
+        ]
+      },
+      {
+        "weekdayColumn": 5,
+        "candidateLineCount": 21,
+        "scoredLineCount": 19,
+        "topScore": 0.4431425929069519,
+        "runnerScore": 0.43084126710891724,
+        "acceptanceFloor": 0.550000011920929,
+        "confuserScore": 0.5884772539138794,
+        "decision": "rejected_below_rescue_floor",
+        "runnerOverlapFraction": 0,
+        "runnerIsSamePhysicalBlock": false,
+        "shadowOcr": {
+          "scoredCount": 18,
+          "best": {
+            "physicalBlockIndex": 0,
+            "verticalDecile": 1,
+            "adjustedScore": 0.44103044271469116,
+            "positiveScore": 0.5610304474830627,
+            "confuserScore": 0.5801011323928833
+          },
+          "scoredByBlock": {
+            "0": 18
+          }
+        },
+        "candidatePipeline": {
+          "strictCount": 15,
+          "looseObserved": 15,
+          "looseAdded": 0,
+          "eligibleOcrTokens": 25,
+          "ocrTokenDeciles": [
+            0,
+            18,
+            3,
+            0,
+            0,
+            1,
+            2,
+            0,
+            1,
+            0
+          ],
+          "ocrMerged": 24,
+          "ocrAdded": 1,
+          "probesAttempted": 32,
+          "probesNearExisting": 23,
+          "probesInkRejected": 1,
+          "probesAdded": 8,
+          "rejectedHeight": 0,
+          "rejectedBody": 3,
+          "finalCandidates": 21,
+          "finalOcrCandidates": 6,
+          "survivorsByBlock": {
+            "0": 7,
+            "1": 3,
+            "2": 11
+          },
+          "eligibleOcrTokensByBlock": {
+            "0": 21,
+            "2": 4
+          },
+          "ocrMergedByBlock": {
+            "0": 21,
+            "2": 3
+          },
+          "ocrAddedByBlock": {
+            "2": 1
+          }
+        },
+        "candidateSources": [
+          {
+            "origin": "ink_gap_probe",
+            "scoredCount": 13,
+            "strongestAdjustedScore": 0.4431425929069519,
+            "strongestPositiveScore": 0.5631425976753235,
+            "strongestConfuserScore": 0.5884772539138794,
+            "strongestPhysicalBlockIndex": 0
+          },
+          {
+            "origin": "ocr_token_band",
+            "scoredCount": 6,
+            "strongestAdjustedScore": 0.43084126710891724,
+            "strongestPositiveScore": 0.5508412718772888,
+            "strongestConfuserScore": 0.5682093501091003,
+            "strongestPhysicalBlockIndex": 2
+          }
+        ],
+        "productionByBlock": [
+          {
+            "physicalBlockIndex": 0,
+            "candidateCount": 7,
+            "best": {
+              "verticalDecile": 2,
+              "adjustedScore": 0.4431425929069519,
+              "positiveScore": 0.5631425976753235,
+              "confuserScore": 0.5884772539138794,
+              "rawSeparation": -0.025334656238555908,
+              "confuserPenalty": 0,
+              "separationAdjustment": -0.11999999731779099,
+              "candidateOrigin": "ink_gap_probe"
+            },
+            "runner": {
+              "verticalDecile": 3,
+              "adjustedScore": 0.4094007611274719,
+              "positiveScore": 0.5294007658958435,
+              "confuserScore": 0.5746406316757202,
+              "rawSeparation": -0.04523986577987671,
+              "confuserPenalty": 0,
+              "separationAdjustment": -0.11999999731779099,
+              "candidateOrigin": "ink_gap_probe"
+            },
+            "scoreMargin": 0.03374183177947998
+          },
+          {
+            "physicalBlockIndex": 1,
+            "candidateCount": 1,
+            "best": {
+              "verticalDecile": 4,
+              "adjustedScore": 0.3569102883338928,
+              "positiveScore": 0.4769102931022644,
+              "confuserScore": 0.49058136343955994,
+              "rawSeparation": -0.013671070337295532,
+              "confuserPenalty": 0,
+              "separationAdjustment": -0.11999999731779099,
+              "candidateOrigin": "ink_gap_probe"
+            },
+            "runner": null,
+            "scoreMargin": null
+          },
+          {
+            "physicalBlockIndex": 2,
+            "candidateCount": 11,
+            "best": {
+              "verticalDecile": 5,
+              "adjustedScore": 0.43084126710891724,
+              "positiveScore": 0.5508412718772888,
+              "confuserScore": 0.5682093501091003,
+              "rawSeparation": -0.017368078231811523,
+              "confuserPenalty": 0,
+              "separationAdjustment": -0.11999999731779099,
+              "candidateOrigin": "ocr_token_band"
+            },
+            "runner": {
+              "verticalDecile": 8,
+              "adjustedScore": 0.42804282903671265,
+              "positiveScore": 0.5480428338050842,
+              "confuserScore": 0.5827832221984863,
+              "rawSeparation": -0.0347403883934021,
+              "confuserPenalty": 0,
+              "separationAdjustment": -0.11999999731779099,
+              "candidateOrigin": "ocr_token_band"
+            },
+            "scoreMargin": 0.00279843807220459
+          }
+        ],
+        "shadowByBlock": [
+          {
+            "physicalBlockIndex": 0,
+            "candidateCount": 18,
+            "best": {
+              "verticalDecile": 1,
+              "adjustedScore": 0.44103044271469116,
+              "positiveScore": 0.5610304474830627,
+              "confuserScore": 0.5801011323928833,
+              "rawSeparation": -0.019070684909820557,
+              "confuserPenalty": 0,
+              "separationAdjustment": -0.11999999731779099,
+              "candidateOrigin": "ocr_token_band"
+            },
+            "runner": {
+              "verticalDecile": 1,
+              "adjustedScore": 0.4397510290145874,
+              "positiveScore": 0.559751033782959,
+              "confuserScore": 0.5861504673957825,
+              "rawSeparation": -0.026399433612823486,
+              "confuserPenalty": 0,
+              "separationAdjustment": -0.11999999731779099,
+              "candidateOrigin": "ocr_token_band"
+            },
+            "scoreMargin": 0.0012794137001037598
+          }
+        ],
+        "shadowReplay": {
+          "originalStatus": "rejected_below_rescue_floor",
+          "replayStatus": "rejected_below_rescue_floor",
+          "originalWinnerBlock": 0,
+          "replayWinnerBlock": 0,
+          "replayScore": 0.4431425929069519,
+          "replayRunner": 0.43084126710891724,
+          "replayMargin": 0.012301325798034668,
+          "trimmedWinner": false,
+          "replayAccepted": false,
+          "decisionChanged": false,
+          "baselineParity": true
+        },
+        "cropExperiments": [
+          {
+            "physicalBlockIndex": 2,
+            "candidateRankInBlock": 1,
+            "candidateOrigin": "ocr_token_band",
+            "verticalDecile": 5,
+            "overlapWithOtherTop": 0,
+            "selectiveTrimEligible": false,
+            "selectiveTrimQualifies": false,
+            "variants": [
+              {
+                "variant": "original",
+                "adjustedScore": 0.43084126710891724,
+                "positiveScore": 0.5508412718772888,
+                "confuserScore": 0.5682093501091003,
+                "rawSeparation": -0.017368078231811523,
+                "confuserPenalty": 0,
+                "separationAdjustment": -0.11999999731779099
+              },
+              {
+                "variant": "widen_28",
+                "adjustedScore": 0.41001302003860474,
+                "positiveScore": 0.5300130248069763,
+                "confuserScore": 0.5524271726608276,
+                "rawSeparation": -0.02241414785385132,
+                "confuserPenalty": 0,
+                "separationAdjustment": -0.11999999731779099
+              },
+              {
+                "variant": "widen_52",
+                "adjustedScore": 0.37518319487571716,
+                "positiveScore": 0.49518319964408875,
+                "confuserScore": 0.508342981338501,
+                "rawSeparation": -0.013159781694412231,
+                "confuserPenalty": 0,
+                "separationAdjustment": -0.11999999731779099
+              },
+              {
+                "variant": "trim_12",
+                "adjustedScore": 0.44224095344543457,
+                "positiveScore": 0.5622409582138062,
+                "confuserScore": 0.5980514883995056,
+                "rawSeparation": -0.03581053018569946,
+                "confuserPenalty": 0,
+                "separationAdjustment": -0.11999999731779099
+              }
+            ]
+          },
+          {
+            "physicalBlockIndex": 2,
+            "candidateRankInBlock": 2,
+            "candidateOrigin": "ocr_token_band",
+            "verticalDecile": 8,
+            "overlapWithOtherTop": 0,
+            "selectiveTrimEligible": false,
+            "selectiveTrimQualifies": false,
+            "variants": [
+              {
+                "variant": "original",
+                "adjustedScore": 0.42804282903671265,
+                "positiveScore": 0.5480428338050842,
+                "confuserScore": 0.5827832221984863,
+                "rawSeparation": -0.0347403883934021,
+                "confuserPenalty": 0,
+                "separationAdjustment": -0.11999999731779099
+              },
+              {
+                "variant": "widen_28",
+                "adjustedScore": 0.3589266538619995,
+                "positiveScore": 0.4789266586303711,
+                "confuserScore": 0.5306512713432312,
+                "rawSeparation": -0.05172461271286011,
+                "confuserPenalty": 0,
+                "separationAdjustment": -0.11999999731779099
+              },
+              {
+                "variant": "widen_52",
+                "adjustedScore": 0.33631613850593567,
+                "positiveScore": 0.45631614327430725,
+                "confuserScore": 0.5116187334060669,
+                "rawSeparation": -0.055302590131759644,
+                "confuserPenalty": 0,
+                "separationAdjustment": -0.11999999731779099
+              },
+              {
+                "variant": "trim_12",
+                "adjustedScore": 0.4458122253417969,
+                "positiveScore": 0.5658122301101685,
+                "confuserScore": 0.5957086682319641,
+                "rawSeparation": -0.029896438121795654,
+                "confuserPenalty": 0,
+                "separationAdjustment": -0.11999999731779099
+              }
+            ]
+          }
+        ],
+        "topCandidates": [
+          {
+            "rank": 1,
+            "physicalBlockIndex": 0,
+            "verticalDecile": 2,
+            "adjustedScore": 0.4431425929069519,
+            "positiveScore": 0.5631425976753235,
+            "confuserScore": 0.5884772539138794,
+            "rawSeparation": -0.025334656238555908,
+            "confuserPenalty": 0,
+            "separationAdjustment": -0.11999999731779099,
+            "candidateOrigin": "ink_gap_probe"
+          },
+          {
+            "rank": 2,
+            "physicalBlockIndex": 2,
+            "verticalDecile": 5,
+            "adjustedScore": 0.43084126710891724,
+            "positiveScore": 0.5508412718772888,
+            "confuserScore": 0.5682093501091003,
+            "rawSeparation": -0.017368078231811523,
+            "confuserPenalty": 0,
+            "separationAdjustment": -0.11999999731779099,
+            "candidateOrigin": "ocr_token_band"
+          },
+          {
+            "rank": 3,
+            "physicalBlockIndex": 2,
+            "verticalDecile": 8,
+            "adjustedScore": 0.42804282903671265,
+            "positiveScore": 0.5480428338050842,
+            "confuserScore": 0.5827832221984863,
+            "rawSeparation": -0.0347403883934021,
+            "confuserPenalty": 0,
+            "separationAdjustment": -0.11999999731779099,
+            "candidateOrigin": "ocr_token_band"
+          }
+        ]
+      },
+      {
+        "weekdayColumn": 6,
+        "candidateLineCount": 21,
+        "scoredLineCount": 21,
+        "topScore": 0.6987552046775818,
+        "runnerScore": 0.44849443435668945,
+        "acceptanceFloor": 0.550000011920929,
+        "confuserScore": 0.5735450387001038,
+        "decision": "accepted_normal",
+        "runnerOverlapFraction": 0,
+        "runnerIsSamePhysicalBlock": true,
+        "shadowOcr": {
+          "scoredCount": 15,
+          "best": {
+            "physicalBlockIndex": 0,
+            "verticalDecile": 1,
+            "adjustedScore": 0.4444974660873413,
+            "positiveScore": 0.5644974708557129,
+            "confuserScore": 0.5930263996124268
+          },
+          "scoredByBlock": {
+            "0": 15
+          }
+        },
+        "candidatePipeline": {
+          "strictCount": 15,
+          "looseObserved": 17,
+          "looseAdded": 2,
+          "eligibleOcrTokens": 20,
+          "ocrTokenDeciles": [
+            0,
+            16,
+            2,
+            0,
+            0,
+            0,
+            1,
+            0,
+            1,
+            0
+          ],
+          "ocrMerged": 19,
+          "ocrAdded": 1,
+          "probesAttempted": 31,
+          "probesNearExisting": 25,
+          "probesInkRejected": 0,
+          "probesAdded": 6,
+          "rejectedHeight": 1,
+          "rejectedBody": 2,
+          "finalCandidates": 21,
+          "finalOcrCandidates": 4,
+          "survivorsByBlock": {
+            "0": 6,
+            "1": 4,
+            "2": 10,
+            "3": 1
+          },
+          "eligibleOcrTokensByBlock": {
+            "0": 18,
+            "2": 2
+          },
+          "ocrMergedByBlock": {
+            "0": 18,
+            "2": 1
+          },
+          "ocrAddedByBlock": {
+            "2": 1
+          }
+        },
+        "candidateSources": [
+          {
+            "origin": "ink_gap_probe",
+            "scoredCount": 17,
+            "strongestAdjustedScore": 0.6987552046775818,
+            "strongestPositiveScore": 0.6987552046775818,
+            "strongestConfuserScore": 0.5735450387001038,
+            "strongestPhysicalBlockIndex": 2
+          },
+          {
+            "origin": "ocr_token_band",
+            "scoredCount": 4,
+            "strongestAdjustedScore": 0.4421769380569458,
+            "strongestPositiveScore": 0.5621769428253174,
+            "strongestConfuserScore": 0.5697968006134033,
+            "strongestPhysicalBlockIndex": 0
+          }
+        ],
+        "productionByBlock": [
+          {
+            "physicalBlockIndex": 0,
+            "candidateCount": 6,
+            "best": {
+              "verticalDecile": 1,
+              "adjustedScore": 0.4421769380569458,
+              "positiveScore": 0.5621769428253174,
+              "confuserScore": 0.5697968006134033,
+              "rawSeparation": -0.0076198577880859375,
+              "confuserPenalty": 0,
+              "separationAdjustment": -0.11999999731779099,
+              "candidateOrigin": "ocr_token_band"
+            },
+            "runner": {
+              "verticalDecile": 1,
+              "adjustedScore": 0.42240333557128906,
+              "positiveScore": 0.5424033403396606,
+              "confuserScore": 0.5685983896255493,
+              "rawSeparation": -0.026195049285888672,
+              "confuserPenalty": 0,
+              "separationAdjustment": -0.11999999731779099,
+              "candidateOrigin": "ocr_token_band"
+            },
+            "scoreMargin": 0.01977360248565674
+          },
+          {
+            "physicalBlockIndex": 1,
+            "candidateCount": 4,
+            "best": {
+              "verticalDecile": 4,
+              "adjustedScore": 0.4391133189201355,
+              "positiveScore": 0.5594567656517029,
+              "confuserScore": 0.6005050539970398,
+              "rawSeparation": -0.041048288345336914,
+              "confuserPenalty": 3.4342051367275417E-4,
+              "separationAdjustment": -0.11999999731779099,
+              "candidateOrigin": "ink_gap_probe"
+            },
+            "runner": {
+              "verticalDecile": 4,
+              "adjustedScore": 0.2960858643054962,
+              "positiveScore": 0.4160858690738678,
+              "confuserScore": 0.5195381045341492,
+              "rawSeparation": -0.10345223546028137,
+              "confuserPenalty": 0,
+              "separationAdjustment": -0.11999999731779099,
+              "candidateOrigin": "ink_gap_probe"
+            },
+            "scoreMargin": 0.14302745461463928
+          },
+          {
+            "physicalBlockIndex": 2,
+            "candidateCount": 10,
+            "best": {
+              "verticalDecile": 8,
+              "adjustedScore": 0.6987552046775818,
+              "positiveScore": 0.6987552046775818,
+              "confuserScore": 0.5735450387001038,
+              "rawSeparation": 0.12521016597747803,
+              "confuserPenalty": 0,
+              "separationAdjustment": 0,
+              "candidateOrigin": "ink_gap_probe"
+            },
+            "runner": {
+              "verticalDecile": 6,
+              "adjustedScore": 0.44849443435668945,
+              "positiveScore": 0.568494439125061,
+              "confuserScore": 0.5880783200263977,
+              "rawSeparation": -0.01958388090133667,
+              "confuserPenalty": 0,
+              "separationAdjustment": -0.11999999731779099,
+              "candidateOrigin": "ink_gap_probe"
+            },
+            "scoreMargin": 0.25026077032089233
+          },
+          {
+            "physicalBlockIndex": 3,
+            "candidateCount": 1,
+            "best": {
+              "verticalDecile": 8,
+              "adjustedScore": 0.3069726228713989,
+              "positiveScore": 0.43745142221450806,
+              "confuserScore": 0.6154100298881531,
+              "rawSeparation": -0.17795860767364502,
+              "confuserPenalty": 0.010478803887963295,
+              "separationAdjustment": -0.11999999731779099,
+              "candidateOrigin": "ink_gap_probe"
+            },
+            "runner": null,
+            "scoreMargin": null
+          }
+        ],
+        "shadowByBlock": [
+          {
+            "physicalBlockIndex": 0,
+            "candidateCount": 15,
+            "best": {
+              "verticalDecile": 1,
+              "adjustedScore": 0.4444974660873413,
+              "positiveScore": 0.5644974708557129,
+              "confuserScore": 0.5930263996124268,
+              "rawSeparation": -0.028528928756713867,
+              "confuserPenalty": 0,
+              "separationAdjustment": -0.11999999731779099,
+              "candidateOrigin": "ocr_token_band"
+            },
+            "runner": {
+              "verticalDecile": 1,
+              "adjustedScore": 0.4418051242828369,
+              "positiveScore": 0.5618051290512085,
+              "confuserScore": 0.5787436366081238,
+              "rawSeparation": -0.016938507556915283,
+              "confuserPenalty": 0,
+              "separationAdjustment": -0.11999999731779099,
+              "candidateOrigin": "ocr_token_band"
+            },
+            "scoreMargin": 0.0026923418045043945
+          }
+        ],
+        "shadowReplay": {
+          "originalStatus": "accepted_normal",
+          "replayStatus": "accepted_normal",
+          "originalWinnerBlock": 2,
+          "replayWinnerBlock": 2,
+          "replayScore": 0.6987552046775818,
+          "replayRunner": 0.44849443435668945,
+          "replayMargin": 0.25026077032089233,
+          "trimmedWinner": false,
+          "replayAccepted": true,
+          "decisionChanged": false,
+          "baselineParity": true
+        },
+        "cropExperiments": [
+          {
+            "physicalBlockIndex": 2,
+            "candidateRankInBlock": 1,
+            "candidateOrigin": "ink_gap_probe",
+            "verticalDecile": 8,
+            "overlapWithOtherTop": 0,
+            "selectiveTrimEligible": false,
+            "selectiveTrimQualifies": false,
+            "variants": [
+              {
+                "variant": "original",
+                "adjustedScore": 0.6987552046775818,
+                "positiveScore": 0.6987552046775818,
+                "confuserScore": 0.5735450387001038,
+                "rawSeparation": 0.12521016597747803,
+                "confuserPenalty": 0,
+                "separationAdjustment": 0
+              },
+              {
+                "variant": "widen_28",
+                "adjustedScore": 0.6906956434249878,
+                "positiveScore": 0.6906956434249878,
+                "confuserScore": 0.5754314064979553,
+                "rawSeparation": 0.11526423692703247,
+                "confuserPenalty": 0,
+                "separationAdjustment": 0
+              },
+              {
+                "variant": "widen_52",
+                "adjustedScore": 0.6860913634300232,
+                "positiveScore": 0.6860913634300232,
+                "confuserScore": 0.5745151042938232,
+                "rawSeparation": 0.11157625913619995,
+                "confuserPenalty": 0,
+                "separationAdjustment": 0
+              },
+              {
+                "variant": "trim_12",
+                "adjustedScore": 0.6951844692230225,
+                "positiveScore": 0.6951844692230225,
+                "confuserScore": 0.5746253132820129,
+                "rawSeparation": 0.12055915594100952,
+                "confuserPenalty": 0,
+                "separationAdjustment": 0
+              }
+            ]
+          },
+          {
+            "physicalBlockIndex": 2,
+            "candidateRankInBlock": 2,
+            "candidateOrigin": "ink_gap_probe",
+            "verticalDecile": 6,
+            "overlapWithOtherTop": 0,
+            "selectiveTrimEligible": false,
+            "selectiveTrimQualifies": false,
+            "variants": [
+              {
+                "variant": "original",
+                "adjustedScore": 0.44849443435668945,
+                "positiveScore": 0.568494439125061,
+                "confuserScore": 0.5880783200263977,
+                "rawSeparation": -0.01958388090133667,
+                "confuserPenalty": 0,
+                "separationAdjustment": -0.11999999731779099
+              },
+              {
+                "variant": "widen_28",
+                "adjustedScore": 0.3903694748878479,
+                "positiveScore": 0.5103694796562195,
+                "confuserScore": 0.5393954515457153,
+                "rawSeparation": -0.02902597188949585,
+                "confuserPenalty": 0,
+                "separationAdjustment": -0.11999999731779099
+              },
+              {
+                "variant": "widen_52",
+                "adjustedScore": 0.3511669337749481,
+                "positiveScore": 0.4711669385433197,
+                "confuserScore": 0.502821147441864,
+                "rawSeparation": -0.03165420889854431,
+                "confuserPenalty": 0,
+                "separationAdjustment": -0.11999999731779099
+              },
+              {
+                "variant": "trim_12",
+                "adjustedScore": 0.4486463665962219,
+                "positiveScore": 0.5686463713645935,
+                "confuserScore": 0.5886430144309998,
+                "rawSeparation": -0.01999664306640625,
+                "confuserPenalty": 0,
+                "separationAdjustment": -0.11999999731779099
+              }
+            ]
+          }
+        ],
+        "topCandidates": [
+          {
+            "rank": 1,
+            "physicalBlockIndex": 2,
+            "verticalDecile": 8,
+            "adjustedScore": 0.6987552046775818,
+            "positiveScore": 0.6987552046775818,
+            "confuserScore": 0.5735450387001038,
+            "rawSeparation": 0.12521016597747803,
+            "confuserPenalty": 0,
+            "separationAdjustment": 0,
+            "candidateOrigin": "ink_gap_probe"
+          },
+          {
+            "rank": 2,
+            "physicalBlockIndex": 2,
+            "verticalDecile": 6,
+            "adjustedScore": 0.44849443435668945,
+            "positiveScore": 0.568494439125061,
+            "confuserScore": 0.5880783200263977,
+            "rawSeparation": -0.01958388090133667,
+            "confuserPenalty": 0,
+            "separationAdjustment": -0.11999999731779099,
+            "candidateOrigin": "ink_gap_probe"
+          },
+          {
+            "rank": 3,
+            "physicalBlockIndex": 0,
+            "verticalDecile": 1,
+            "adjustedScore": 0.4421769380569458,
+            "positiveScore": 0.5621769428253174,
+            "confuserScore": 0.5697968006134033,
+            "rawSeparation": -0.0076198577880859375,
+            "confuserPenalty": 0,
+            "separationAdjustment": -0.11999999731779099,
+            "candidateOrigin": "ocr_token_band"
+          }
+        ]
+      }
+    ],
+    "markerDetails": [
+      {
+        "weekdayColumn": 0,
+        "physicalBlockIndex": 0,
+        "origin": "saved_profile",
+        "scoreDecile": 6,
+        "confirmed": false
+      },
+      {
+        "weekdayColumn": 1,
+        "physicalBlockIndex": 2,
+        "origin": "saved_profile",
+        "scoreDecile": 7,
+        "confirmed": false
+      },
+      {
+        "weekdayColumn": 3,
+        "physicalBlockIndex": 2,
+        "origin": "saved_profile",
+        "scoreDecile": 7,
+        "confirmed": false
+      },
+      {
+        "weekdayColumn": 6,
+        "physicalBlockIndex": 2,
+        "origin": "saved_profile",
+        "scoreDecile": 6,
+        "confirmed": false
+      }
+    ],
+    "status": "observed_in_viewer",
+    "suggestedCount": 4,
+    "confirmedCount": 0,
+    "suggestionsByWeekdayColumn": [
+      1,
+      1,
+      0,
+      1,
+      0,
+      0,
+      1
+    ],
+    "confirmedByWeekdayColumn": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  "candidates": []
+}

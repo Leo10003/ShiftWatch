@@ -38,7 +38,7 @@ jobs:
       - name: Validate reference cases and project metadata
         run: |
           python3 tools/verify_regression_cases.py
-          python3 -m unittest discover -s tools/tests -p test_evaluate_labelled_scans.py
+          python3 -m unittest discover -s tools/tests -p test_*.py
           python3 tools/verify-recognition-baseline.py
       - name: Compile, test and lint
         run: bash ./gradlew --no-daemon --stacktrace :app:assembleDebug :app:testDebugUnitTest :app:lintDebug
