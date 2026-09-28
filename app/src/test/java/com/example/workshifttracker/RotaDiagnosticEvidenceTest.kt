@@ -16,6 +16,19 @@ class RotaDiagnosticEvidenceTest {
         assertTrue(variants.all { it.top >= 0 && it.bottom < 200 && it.top < it.bottom })
     }
 
+    @Test fun selectiveTrimHypothesisUsesCandidatePropertiesNotWeekdays() {
+        val saturdayLike = RotaDiagnosticEvidence.CropVariantScore("original", .496f, .618f, .604f, .014f, 0f, -.12f)
+        val trimmed = RotaDiagnosticEvidence.CropVariantScore("trim_12", .668f, .70f, .644f, .056f, 0f, 0f)
+        assertTrue(RotaDiagnosticEvidence.selectiveTrimEligible("ocr_token_band", saturdayLike))
+        assertTrue(RotaDiagnosticEvidence.selectiveTrimQualifies(saturdayLike, trimmed))
+        assertFalse(RotaDiagnosticEvidence.selectiveTrimEligible("ink_gap_probe", saturdayLike))
+        val fridayLike = saturdayLike.copy(adjustedScore=.438f, rawSeparation=-.031f)
+        assertFalse(RotaDiagnosticEvidence.selectiveTrimEligible("ocr_token_band", fridayLike))
+        val thursdayLike = saturdayLike.copy(adjustedScore=.543f, rawSeparation=.02f)
+        assertFalse(RotaDiagnosticEvidence.selectiveTrimEligible("ink_gap_probe", thursdayLike))
+        assertFalse(RotaDiagnosticEvidence.selectiveTrimQualifies(saturdayLike, trimmed.copy(rawSeparation=.015f)))
+    }
+
     @Test fun diagnosticCropExperimentCannotAlterRecognitionDecision() {
         val variant = RotaDiagnosticEvidence.CropVariantScore(
             "widen_28", .90f, .92f, .20f, .72f, 0f, .025f)

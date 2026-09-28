@@ -12,8 +12,8 @@ android {
         applicationId = "com.example.workshifttracker"
         minSdk = 26
         targetSdk = 36
-        versionCode = 223
-        versionName = "20.8.12"
+        versionCode = 224
+        versionName = "20.8.13"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

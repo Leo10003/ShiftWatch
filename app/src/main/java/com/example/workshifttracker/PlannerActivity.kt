@@ -1024,7 +1024,7 @@ private fun ImportReviewSheet(
                     // Privacy by default: no name, photo, OCR text, exact dates or handwriting
                     // crops. Even the candidate IDs are replaced with local ordinal indices.
                     val result = JSONObject().apply {
-                        put("schemaVersion", 13)
+                        put("schemaVersion", 14)
                         put("appVersion", installedAppVersion)
                         put("sessionId", diagnosticSession)
                         put("captureUtc", java.time.Instant.now().toString())
@@ -1238,6 +1238,8 @@ private fun ImportReviewSheet(
                                                     put("candidateOrigin", experiment.candidateOrigin)
                                                     put("verticalDecile", experiment.verticalDecile)
                                                     put("overlapWithOtherTop", experiment.overlapWithOtherTop?.toDouble() ?: JSONObject.NULL)
+                                                    put("selectiveTrimEligible", experiment.selectiveTrimEligible)
+                                                    put("selectiveTrimQualifies", experiment.selectiveTrimQualifies)
                                                     put("variants", JSONArray().apply {
                                                         experiment.variants.forEach { score ->
                                                             put(JSONObject().apply {
@@ -1372,6 +1374,8 @@ private fun ImportReviewSheet(
                                                     put("candidateOrigin", experiment.candidateOrigin)
                                                     put("verticalDecile", experiment.verticalDecile)
                                                     put("overlapWithOtherTop", experiment.overlapWithOtherTop?.toDouble() ?: JSONObject.NULL)
+                                                    put("selectiveTrimEligible", experiment.selectiveTrimEligible)
+                                                    put("selectiveTrimQualifies", experiment.selectiveTrimQualifies)
                                                     put("variants", JSONArray().apply {
                                                         experiment.variants.forEach { score ->
                                                             put(JSONObject().apply {

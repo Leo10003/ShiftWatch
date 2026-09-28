@@ -89,28 +89,38 @@ foreach($r in $reports) {
         $lines += "| $($r.sessionId.Substring(0,8)) | $($dayNames[$day]) | $production | $shadowText |"
     }
 }
-$lines += '', '## Controlled vertical-crop experiments (schema 13; diagnostic only)', '',
-    'Only two top distinct production candidates in physical block 2 per investigated day are tested. Original crop and any altered crops are scored with the same profile but cannot create suggestions.',
-    '', '| Scan | Day | Rank / origin | Top-2 overlap | Original adjusted / separation | Best altered adjusted / separation |',
-    '|---|---|---|---:|---|---|'
+$lines += '', '## Cross-day selective-crop evaluation (schema 14; diagnostic only)', '',
+    'All seven weekday columns are evaluated in physical block 2, including Friday OFF as an independent negative control. A qualifying crop is NOT an accepted shift.',
+    '', '| Scan | Day | Candidate / origin | Original score / separation | Trim score / separation | Eligible | Qualifies |',
+    '|---|---|---|---|---|---|---|'
 foreach ($r in $reports) {
-    foreach ($day in @(3,4,5)) {
+    foreach ($day in 0..6) {
         $d=@($r.viewerMarkers.savedProfileDecisions | Where-Object { [int]$_.weekdayColumn -eq $day })[0]
-        if (-not $d.cropExperiments) {
-            $lines += "| $($r.sessionId.Substring(0,8)) | $($dayNames[$day]) | unavailable | n/a | n/a | requires schema 13 |"
+        if ([int]$r.schemaVersion -lt 14 -or -not $d.cropExperiments) {
+            $lines += "| $($r.sessionId.Substring(0,8)) | $($dayNames[$day]) | unavailable | n/a | n/a | n/a | requires schema 14 |"
             continue
         }
         foreach ($item in $d.cropExperiments) {
             $original=@($item.variants | Where-Object { $_.variant -eq 'original' } | Select-Object -First 1)
-            $altered=@($item.variants | Where-Object { $_.variant -ne 'original' } | Sort-Object -Property @{Expression='rawSeparation';Descending=$true}, @{Expression='adjustedScore';Descending=$true} | Select-Object -First 1)
+            $trim=@($item.variants | Where-Object { $_.variant -eq 'trim_12' } | Select-Object -First 1)
             $origText=if($original.Count -gt 0) { "$([math]::Round([double]$original[0].adjustedScore,3)) / $([math]::Round([double]$original[0].rawSeparation,3))" } else { 'unavailable' }
-            $alteredText=if($altered.Count -gt 0) { "$($altered[0].variant): $([math]::Round([double]$altered[0].adjustedScore,3)) / $([math]::Round([double]$altered[0].rawSeparation,3))" } else { 'unavailable' }
-            $overlap=if($null -ne $item.overlapWithOtherTop) { [math]::Round([double]$item.overlapWithOtherTop,2) } else { 'n/a' }
-            $lines += "| $($r.sessionId.Substring(0,8)) | $($dayNames[$day]) | $($item.candidateRankInBlock) / $($item.candidateOrigin) | $overlap | $origText | $alteredText |"
+            $trimText=if($trim.Count -gt 0) { "$([math]::Round([double]$trim[0].adjustedScore,3)) / $([math]::Round([double]$trim[0].rawSeparation,3))" } else { 'unavailable' }
+            $lines += "| $($r.sessionId.Substring(0,8)) | $($dayNames[$day]) | $($item.candidateRankInBlock) / $($item.candidateOrigin) | $origText | $trimText | $($item.selectiveTrimEligible) | $($item.selectiveTrimQualifies) |"
         }
     }
 }
-$lines += '', 'Friday is an OFF control. An increased score is not evidence of correctness. Experimental variants never alter suggestions.'
+$lines += '', '## Experimental gate summary (never production)', ''
+foreach ($r in $reports) {
+    if ([int]$r.schemaVersion -lt 14) { $lines += "- $($r.sessionId.Substring(0,8)): schema 14 unavailable"; continue }
+    $rows=@($r.viewerMarkers.savedProfileDecisions | ForEach-Object { $_.cropExperiments })
+    $eligible=@($rows | Where-Object { $_.selectiveTrimEligible }).Count
+    $qualifying=@($rows | Where-Object { $_.selectiveTrimQualifies }).Count
+    $off=@($r.viewerMarkers.savedProfileDecisions | Where-Object { [int]$_.weekdayColumn -eq 4 })[0]
+    $offQualifying=@($off.cropExperiments | Where-Object { $_.selectiveTrimQualifies }).Count
+    $lines += "- $($r.sessionId.Substring(0,8)): eligible $eligible; qualify $qualifying; Friday OFF qualifying $offQualifying"
+}
+$lines += '', 'An OFF control passing this experimental gate invalidates the proposed gate for production. A single OFF control passing is not the only possible failure: validate on other photographs and negative profiles.',
+    'A gate-qualified crop is NOT an accepted shift. Normal production ranking, runner margin and confuser policies would still apply in any future trial.'
 $lines += '', 'Never interpret experimental shadow scores as accepted shift suggestions.'
 $report=$lines -join "`n"
 Write-Output $report

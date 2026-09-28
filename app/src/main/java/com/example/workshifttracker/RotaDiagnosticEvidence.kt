@@ -234,8 +234,29 @@ internal object RotaDiagnosticEvidence {
     data class CropExperiment(
         val physicalBlockIndex: Int, val candidateRankInBlock: Int,
         val candidateOrigin: String, val verticalDecile: Int,
-        val variants: List<CropVariantScore>, val overlapWithOtherTop: Float?
+        val variants: List<CropVariantScore>, val overlapWithOtherTop: Float?,
+        val selectiveTrimEligible: Boolean = false,
+        val selectiveTrimQualifies: Boolean = false
     )
+
+    /** Hypothesis for offline analysis only: the rule is independent of weekday and block.
+     * Strong original candidates are intentionally not sent through the proposed retry.
+     * Eligibility alone NEVER marks a shift or selects an alternate candidate.
+     */
+    fun selectiveTrimEligible(origin: String, original: CropVariantScore): Boolean =
+        origin == "ocr_token_band" && original.positiveScore >= .58f &&
+            original.rawSeparation >= 0f && original.rawSeparation < .05f &&
+            original.adjustedScore in 0.40f..0.55f
+
+    /** Conservative evidence gate; *not* a production acceptance rule.
+     * Existing ranked candidates, runner margin and learned-confuser checks remain mandatory
+     * in any future controlled production trial.
+     */
+    fun selectiveTrimQualifies(original: CropVariantScore, trimmed: CropVariantScore?): Boolean =
+        trimmed != null && trimmed.variant == "trim_12" &&
+            trimmed.adjustedScore >= .60f && trimmed.rawSeparation >= .05f &&
+            trimmed.adjustedScore - original.adjustedScore >= .10f &&
+            trimmed.rawSeparation - original.rawSeparation >= .025f
 
     /** A fixed set of symmetric crop variants. Boundaries are never exported.
      * Avoid introducing new pixels from outside the bitmap; deduplicate at edges.

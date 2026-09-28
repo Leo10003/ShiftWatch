@@ -465,10 +465,12 @@ internal object OfflineRotaVision {
             val ranked = candidates.mapNotNull(::scoreCandidate).sortedWith(compareByDescending<Ranked> { it.score }
                 .thenBy { it.candidate.band.top }.thenBy { it.candidate.band.bottom })
             val productionByBlock = RotaDiagnosticEvidence.blockScoreEvidence(ranked.map(::evidenceRow))
-            // Diagnostic-only: compare vertical crop geometry on the two leading distinct
-            // candidates INSIDE the expected evening block. Include Friday as the OFF
-            // control; no experimental score is allowed into `ranked` or acceptance.
-            val cropExperiments = if (column in setOf(3, 4, 5)) {
+            // Diagnostic-only cross-day control: inspect the two strongest distinct candidates
+            // in physical block 2 for EVERY column, including OFF days. This is a reference-
+            // layout experiment, not a weekday-specific matching exception. Only an OCR-derived
+            // weakly separated candidate can qualify for the *proposed* selective retry.
+            // No experimental score is permitted into `ranked`, matches, or profile learning.
+            val cropExperiments = run {
                 val targetBlock = ranked.filter { item ->
                     RotaGridModel.blockIndexForY(assist, column, item.candidate.band.center / sy) == 2
                 }.distinctBy { it.candidate.band }.take(2)
@@ -482,6 +484,13 @@ internal object OfflineRotaVision {
                             variant.label, result.score, result.positive, result.negative,
                             result.rawSeparation, result.confuserPenalty, result.separationAdjustment)
                     }
+                    val original = readings.firstOrNull { it.variant == "original" }
+                    val eligible = original?.let {
+                        RotaDiagnosticEvidence.selectiveTrimEligible(
+                            if (baseline.candidate.ocrText == null) "ink_gap_probe" else "ocr_token_band", it)
+                    } ?: false
+                    val qualifies = eligible && original != null && RotaDiagnosticEvidence.selectiveTrimQualifies(
+                        original, readings.firstOrNull { it.variant == "trim_12" })
                     RotaDiagnosticEvidence.CropExperiment(
                         physicalBlockIndex = 2,
                         candidateRankInBlock = index + 1,
@@ -489,13 +498,15 @@ internal object OfflineRotaVision {
                         verticalDecile = RotaDiagnosticEvidence.verticalDecile(
                             baseline.candidate.band.center / sy, assist.imageHeight.toFloat()),
                         variants = readings,
+                        selectiveTrimEligible = eligible,
+                        selectiveTrimQualifies = qualifies,
                         overlapWithOtherTop = targetBlock.getOrNull(1 - index)?.let {
                             RotaDiagnosticEvidence.bandOverlapFraction(
                                 baseline.candidate.band.top, baseline.candidate.band.bottom,
                                 it.candidate.band.top, it.candidate.band.bottom)
                         })
                 }
-            } else emptyList()
+            }
             val best = ranked.firstOrNull()
             if (best == null) {
                 decisions[column] = RotaDiagnosticEvidence.ProfileDecision(column, candidates.size, 0, null, null, null, null,
