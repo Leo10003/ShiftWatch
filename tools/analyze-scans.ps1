@@ -29,7 +29,7 @@ foreach ($r in $reports) {
         elseif ($accepted -and $block -eq $baselineBlocks[$day]) { $hits++ }
     }
     $lines += "- $($r.appVersion): $hits/6 location hits, $fp false suggestions, scan ${seconds}s"
-    $snapshot=($row | ForEach-Object { "$( $_.weekdayColumn):$($_.decision):$($_.topScore):$($_.candidatePipeline | ConvertTo-Json -Compress -Depth 10):$($_.productionByBlock | ConvertTo-Json -Compress -Depth 10):$($_.shadowByBlock | ConvertTo-Json -Compress -Depth 10):$($_.cropExperiments | ConvertTo-Json -Compress -Depth 10)" }) -join '\n'
+    $snapshot=($row | ForEach-Object { "$( $_.weekdayColumn):$($_.decision):$($_.topScore):$($_.candidatePipeline | ConvertTo-Json -Compress -Depth 10):$($_.productionByBlock | ConvertTo-Json -Compress -Depth 10):$($_.shadowByBlock | ConvertTo-Json -Compress -Depth 10):$($_.cropExperiments | ConvertTo-Json -Compress -Depth 10):$($_.shadowReplay | ConvertTo-Json -Compress -Depth 10)" }) -join '\n'
     if ($null -ne $reference -and $snapshot -cne $reference) { $drift++ }
     if ($null -eq $reference) { $reference=$snapshot }
 }

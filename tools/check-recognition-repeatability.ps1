@@ -112,6 +112,12 @@ foreach ($other in @($reports | Select-Object -Skip 1)) {
                 $differences++
             }
         }
+        if ([int]$base.Data.schemaVersion -ge 15 -and [int]$other.Data.schemaVersion -ge 15) {
+            if (($a.shadowReplay | ConvertTo-Json -Compress -Depth 10) -cne ($b.shadowReplay | ConvertTo-Json -Compress -Depth 10)) {
+                Write-Host "  $($days[$day]) shadowReplay differs (diagnostic only)"
+                $differences++
+            }
+        }
         $leftBlocks = $a.candidatePipeline.survivorsByBlock | ConvertTo-Json -Compress
         $rightBlocks = $b.candidatePipeline.survivorsByBlock | ConvertTo-Json -Compress
         if ($leftBlocks -cne $rightBlocks) {

@@ -1024,7 +1024,7 @@ private fun ImportReviewSheet(
                     // Privacy by default: no name, photo, OCR text, exact dates or handwriting
                     // crops. Even the candidate IDs are replaced with local ordinal indices.
                     val result = JSONObject().apply {
-                        put("schemaVersion", 14)
+                        put("schemaVersion", 15)
                         put("appVersion", installedAppVersion)
                         put("sessionId", diagnosticSession)
                         put("captureUtc", java.time.Instant.now().toString())
@@ -1230,6 +1230,19 @@ private fun ImportReviewSheet(
                                         }
                                         put("productionByBlock", JSONArray().apply { addBlockEvidence(decision.productionByBlock) })
                                         put("shadowByBlock", JSONArray().apply { addBlockEvidence(decision.shadowByBlock) })
+                                        put("shadowReplay", decision.shadowReplay?.let { replay -> JSONObject().apply {
+                                            put("originalStatus", replay.originalStatus)
+                                            put("replayStatus", replay.replayStatus)
+                                            put("originalWinnerBlock", replay.originalWinnerBlock ?: JSONObject.NULL)
+                                            put("replayWinnerBlock", replay.replayWinnerBlock ?: JSONObject.NULL)
+                                            put("replayScore", replay.replayScore?.toDouble() ?: JSONObject.NULL)
+                                            put("replayRunner", replay.replayRunner?.toDouble() ?: JSONObject.NULL)
+                                            put("replayMargin", replay.replayMargin?.toDouble() ?: JSONObject.NULL)
+                                            put("trimmedWinner", replay.trimmedWinner)
+                                            put("replayAccepted", replay.replayAccepted)
+                                            put("decisionChanged", replay.decisionChanged)
+                                            put("baselineParity", replay.baselineParity)
+                                        } } ?: JSONObject.NULL)
                                         put("cropExperiments", JSONArray().apply {
                                             decision.cropExperiments.forEach { experiment ->
                                                 put(JSONObject().apply {
@@ -1366,6 +1379,19 @@ private fun ImportReviewSheet(
                                         }
                                         put("productionByBlock", JSONArray().apply { addBlockEvidence(decision.productionByBlock) })
                                         put("shadowByBlock", JSONArray().apply { addBlockEvidence(decision.shadowByBlock) })
+                                        put("shadowReplay", decision.shadowReplay?.let { replay -> JSONObject().apply {
+                                            put("originalStatus", replay.originalStatus)
+                                            put("replayStatus", replay.replayStatus)
+                                            put("originalWinnerBlock", replay.originalWinnerBlock ?: JSONObject.NULL)
+                                            put("replayWinnerBlock", replay.replayWinnerBlock ?: JSONObject.NULL)
+                                            put("replayScore", replay.replayScore?.toDouble() ?: JSONObject.NULL)
+                                            put("replayRunner", replay.replayRunner?.toDouble() ?: JSONObject.NULL)
+                                            put("replayMargin", replay.replayMargin?.toDouble() ?: JSONObject.NULL)
+                                            put("trimmedWinner", replay.trimmedWinner)
+                                            put("replayAccepted", replay.replayAccepted)
+                                            put("decisionChanged", replay.decisionChanged)
+                                            put("baselineParity", replay.baselineParity)
+                                        } } ?: JSONObject.NULL)
                                         put("cropExperiments", JSONArray().apply {
                                             decision.cropExperiments.forEach { experiment ->
                                                 put(JSONObject().apply {

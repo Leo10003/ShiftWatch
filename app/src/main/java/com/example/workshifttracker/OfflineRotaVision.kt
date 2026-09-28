@@ -402,6 +402,8 @@ internal object OfflineRotaVision {
         )
         val deferred = mutableListOf<Deferred>()
         val decisions = linkedMapOf<Int, RotaDiagnosticEvidence.ProfileDecision>()
+        val replayColumns = mutableListOf<RotaShadowDecisionReplay.Column>()
+        val replayBaselineColumns = mutableListOf<RotaShadowDecisionReplay.Column>()
         for (column in 0..6) {
             val (sourceLeft, sourceRight) = ScheduleImporter.columnBounds(assist, column)
             val left = (sourceLeft * sx).toInt().coerceIn(0, bitmap.width - 2)
@@ -470,10 +472,10 @@ internal object OfflineRotaVision {
             // layout experiment, not a weekday-specific matching exception. Only an OCR-derived
             // weakly separated candidate can qualify for the *proposed* selective retry.
             // No experimental score is permitted into `ranked`, matches, or profile learning.
+            val targetBlock = ranked.filter { item ->
+                RotaGridModel.blockIndexForY(assist, column, item.candidate.band.center / sy) == 2
+            }.distinctBy { it.candidate.band }.take(2)
             val cropExperiments = run {
-                val targetBlock = ranked.filter { item ->
-                    RotaGridModel.blockIndexForY(assist, column, item.candidate.band.center / sy) == 2
-                }.distinctBy { it.candidate.band }.take(2)
                 targetBlock.mapIndexed { index, baseline ->
                     val variants = RotaDiagnosticEvidence.verticalCropVariants(
                         baseline.candidate.band.top, baseline.candidate.band.bottom, bitmap.height)
@@ -507,6 +509,33 @@ internal object OfflineRotaVision {
                         })
                 }
             }
+            // Replay substitutes a qualifying candidate IN PLACE: never add a duplicate that
+            // could manufacture an extra runner-up. All other ranked candidates remain intact.
+            val replayCandidates = ranked.map { item ->
+                val experiment = cropExperiments.firstOrNull { exp ->
+                    exp.selectiveTrimQualifies && targetBlock.getOrNull(exp.candidateRankInBlock - 1) === item
+                }
+                val trimmed = experiment?.variants?.firstOrNull { it.variant == "trim_12" }
+                RotaShadowDecisionReplay.Candidate(
+                    score = trimmed?.adjustedScore ?: item.score,
+                    negative = trimmed?.confuserScore ?: item.negative,
+                    // Match production semantics: Ranked.separation is adjusted score - confuser.
+                    separation = (trimmed?.adjustedScore ?: item.score) - (trimmed?.confuserScore ?: item.negative),
+                    block = RotaGridModel.blockIndexForY(assist, column, item.candidate.band.center / sy),
+                    trimmed = trimmed != null
+                )
+            }
+            val replayPairScores = mutableListOf<Float>()
+            for (i in profiles.indices) for (j in i + 1 until profiles.size)
+                replayPairScores += similarity(profiles[i], profiles[j])
+            val replayConsistency = replayPairScores.takeIf { it.isNotEmpty() }?.average()?.toFloat() ?: .78f
+            replayColumns += RotaShadowDecisionReplay.Column(column,
+                (replayConsistency - .17f).coerceIn(.55f, .69f), replayCandidates, candidates.size)
+            replayBaselineColumns += RotaShadowDecisionReplay.Column(column,
+                (replayConsistency - .17f).coerceIn(.55f, .69f), ranked.map { item ->
+                    RotaShadowDecisionReplay.Candidate(item.score, item.negative, item.separation,
+                        RotaGridModel.blockIndexForY(assist, column, item.candidate.band.center / sy))
+                }, candidates.size)
             val best = ranked.firstOrNull()
             if (best == null) {
                 decisions[column] = RotaDiagnosticEvidence.ProfileDecision(column, candidates.size, 0, null, null, null, null,
@@ -658,6 +687,29 @@ internal object OfflineRotaVision {
                     decisions[item.column] = decisions.getValue(item.column).copy(status = "accepted_mature_profile_recovery")
                 }
             }
+        }
+        // Diagnostic only. Never append replay matches or modify the accepted matcher result.
+        val replay = RotaShadowDecisionReplay.replay(replayColumns, profiles.size, model.negatives.size)
+        val baselineReplay = RotaShadowDecisionReplay.replay(
+            replayBaselineColumns, profiles.size, model.negatives.size).associateBy { it.day }
+        replay.forEach { hypothetical ->
+            val actual = decisions.getValue(hypothetical.day)
+            val actualBlock = actual.rankedCandidates.firstOrNull()?.physicalBlockIndex
+            val original = baselineReplay.getValue(hypothetical.day)
+            val parity = original.status == actual.status &&
+                original.winnerBlock == actualBlock &&
+                ((original.best == null && actual.bestScore == null) ||
+                    (original.best != null && actual.bestScore != null &&
+                        kotlin.math.abs(original.best - actual.bestScore) < .00001f))
+            decisions[hypothetical.day] = actual.copy(shadowReplay = RotaDiagnosticEvidence.ShadowReplay(
+                originalStatus = actual.status, replayStatus = hypothetical.status,
+                originalWinnerBlock = actualBlock, replayWinnerBlock = hypothetical.winnerBlock,
+                replayScore = hypothetical.best, replayRunner = hypothetical.runner,
+                replayMargin = hypothetical.margin, trimmedWinner = hypothetical.selectedTrim,
+                replayAccepted = hypothetical.accepted,
+                decisionChanged = actual.status != hypothetical.status || actualBlock != hypothetical.winnerBlock,
+                baselineParity = parity
+            ))
         }
         return Report(-1, 0f, matches.sortedBy { it.column }, scanned,
             (0..6).map { decisions.getValue(it) })

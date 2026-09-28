@@ -280,6 +280,16 @@ internal object RotaDiagnosticEvidence {
             .distinctBy { it.top to it.bottom }
     }
 
+    /** A hypothetical full-week reranking; not an accepted shift or actual viewer marker. */
+    data class ShadowReplay(
+        val originalStatus: String, val replayStatus: String,
+        val originalWinnerBlock: Int?, val replayWinnerBlock: Int?,
+        val replayScore: Float?, val replayRunner: Float?, val replayMargin: Float?,
+        val trimmedWinner: Boolean, val replayAccepted: Boolean,
+        val decisionChanged: Boolean,
+        val baselineParity: Boolean
+    )
+
     data class ProfileDecision(
         val weekdayColumn: Int,
         val candidateCount: Int,
@@ -297,7 +307,8 @@ internal object RotaDiagnosticEvidence {
         val shadowOcr: ShadowOcrEvidence? = null,
         val productionByBlock: List<BlockScoreEvidence> = emptyList(),
         val shadowByBlock: List<BlockScoreEvidence> = emptyList(),
-        val cropExperiments: List<CropExperiment> = emptyList()
+        val cropExperiments: List<CropExperiment> = emptyList(),
+        val shadowReplay: ShadowReplay? = null
     )
 
     /** Candidate overlap is computed locally; exact image coordinates are never exported. */
