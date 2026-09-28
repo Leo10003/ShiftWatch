@@ -224,6 +224,41 @@ internal object RotaDiagnosticEvidence {
                     runner?.copy(rank = 2), runner?.let { ordered[0].adjustedScore - it.adjustedScore })
             }
 
+    /** Anonymous candidate crop experiments: scores are never used for shift acceptance. */
+    data class VerticalCrop(val label: String, val top: Int, val bottom: Int)
+    data class CropVariantScore(
+        val variant: String, val adjustedScore: Float, val positiveScore: Float,
+        val confuserScore: Float, val rawSeparation: Float,
+        val confuserPenalty: Float, val separationAdjustment: Float
+    )
+    data class CropExperiment(
+        val physicalBlockIndex: Int, val candidateRankInBlock: Int,
+        val candidateOrigin: String, val verticalDecile: Int,
+        val variants: List<CropVariantScore>, val overlapWithOtherTop: Float?
+    )
+
+    /** A fixed set of symmetric crop variants. Boundaries are never exported.
+     * Avoid introducing new pixels from outside the bitmap; deduplicate at edges.
+     * These compare only vertical geometry, not OCR/preprocessing methods.
+     */
+    fun verticalCropVariants(top: Int, bottom: Int, imageHeight: Int): List<VerticalCrop> {
+        require(imageHeight > 0 && top in 0 until imageHeight && bottom in top until imageHeight)
+        val height = bottom - top + 1
+        val widen28 = maxOf(3, (height * 0.28f).toInt())
+        val widen52 = maxOf(5, (height * 0.52f).toInt())
+        val trim = maxOf(1, (height * 0.12f).toInt())
+        val candidates = listOf(
+            VerticalCrop("original", top, bottom),
+            VerticalCrop("widen_28", (top - widen28).coerceAtLeast(0),
+                (bottom + widen28).coerceAtMost(imageHeight - 1)),
+            VerticalCrop("widen_52", (top - widen52).coerceAtLeast(0),
+                (bottom + widen52).coerceAtMost(imageHeight - 1)),
+            VerticalCrop("trim_12", top + trim, bottom - trim)
+        )
+        return candidates.filter { it.bottom > it.top }
+            .distinctBy { it.top to it.bottom }
+    }
+
     data class ProfileDecision(
         val weekdayColumn: Int,
         val candidateCount: Int,
@@ -240,7 +275,8 @@ internal object RotaDiagnosticEvidence {
         val pipeline: CandidatePipeline? = null,
         val shadowOcr: ShadowOcrEvidence? = null,
         val productionByBlock: List<BlockScoreEvidence> = emptyList(),
-        val shadowByBlock: List<BlockScoreEvidence> = emptyList()
+        val shadowByBlock: List<BlockScoreEvidence> = emptyList(),
+        val cropExperiments: List<CropExperiment> = emptyList()
     )
 
     /** Candidate overlap is computed locally; exact image coordinates are never exported. */

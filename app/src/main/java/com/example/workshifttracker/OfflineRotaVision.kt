@@ -465,13 +465,44 @@ internal object OfflineRotaVision {
             val ranked = candidates.mapNotNull(::scoreCandidate).sortedWith(compareByDescending<Ranked> { it.score }
                 .thenBy { it.candidate.band.top }.thenBy { it.candidate.band.bottom })
             val productionByBlock = RotaDiagnosticEvidence.blockScoreEvidence(ranked.map(::evidenceRow))
+            // Diagnostic-only: compare vertical crop geometry on the two leading distinct
+            // candidates INSIDE the expected evening block. Include Friday as the OFF
+            // control; no experimental score is allowed into `ranked` or acceptance.
+            val cropExperiments = if (column in setOf(3, 4, 5)) {
+                val targetBlock = ranked.filter { item ->
+                    RotaGridModel.blockIndexForY(assist, column, item.candidate.band.center / sy) == 2
+                }.distinctBy { it.candidate.band }.take(2)
+                targetBlock.mapIndexed { index, baseline ->
+                    val variants = RotaDiagnosticEvidence.verticalCropVariants(
+                        baseline.candidate.band.top, baseline.candidate.band.bottom, bitmap.height)
+                    val readings = variants.mapNotNull { variant ->
+                        val result = scoreCandidate(Candidate(Band(variant.top, variant.bottom), baseline.candidate.ocrText))
+                            ?: return@mapNotNull null
+                        RotaDiagnosticEvidence.CropVariantScore(
+                            variant.label, result.score, result.positive, result.negative,
+                            result.rawSeparation, result.confuserPenalty, result.separationAdjustment)
+                    }
+                    RotaDiagnosticEvidence.CropExperiment(
+                        physicalBlockIndex = 2,
+                        candidateRankInBlock = index + 1,
+                        candidateOrigin = if (baseline.candidate.ocrText == null) "ink_gap_probe" else "ocr_token_band",
+                        verticalDecile = RotaDiagnosticEvidence.verticalDecile(
+                            baseline.candidate.band.center / sy, assist.imageHeight.toFloat()),
+                        variants = readings,
+                        overlapWithOtherTop = targetBlock.getOrNull(1 - index)?.let {
+                            RotaDiagnosticEvidence.bandOverlapFraction(
+                                baseline.candidate.band.top, baseline.candidate.band.bottom,
+                                it.candidate.band.top, it.candidate.band.bottom)
+                        })
+                }
+            } else emptyList()
             val best = ranked.firstOrNull()
             if (best == null) {
                 decisions[column] = RotaDiagnosticEvidence.ProfileDecision(column, candidates.size, 0, null, null, null, null,
                     if (candidates.isEmpty()) "no_candidate_lines" else "no_usable_signatures",
                     pipeline = cachedCandidateTrace(bitmap, assist, column, left, right),
                     shadowOcr = shadowEvidence, productionByBlock = productionByBlock,
-                    shadowByBlock = shadowByBlock)
+                    shadowByBlock = shadowByBlock, cropExperiments = cropExperiments)
                 continue
             }
             val runner = ranked.getOrNull(1)?.score ?: 0f
@@ -530,6 +561,7 @@ internal object OfflineRotaVision {
                 pipeline = cachedCandidateTrace(bitmap, assist, column, left, right),
                 shadowOcr = shadowEvidence,
                 productionByBlock = productionByBlock, shadowByBlock = shadowByBlock,
+                cropExperiments = cropExperiments,
                 candidateSources = RotaDiagnosticEvidence.sourceEvidence(ranked.map { item ->
                     val documentY = item.candidate.band.center / sy
                     val origin = if (item.candidate.ocrText == null) "ink_gap_probe" else "ocr_token_band"

@@ -104,6 +104,14 @@ foreach ($other in @($reports | Select-Object -Skip 1)) {
                 }
             }
         }
+        if ([int]$base.Data.schemaVersion -ge 13 -and [int]$other.Data.schemaVersion -ge 13) {
+            $leftExperiment = $a.cropExperiments | ConvertTo-Json -Compress -Depth 10
+            $rightExperiment = $b.cropExperiments | ConvertTo-Json -Compress -Depth 10
+            if ($leftExperiment -cne $rightExperiment) {
+                Write-Host "  $($days[$day]) cropExperiments differ (experimental only)"
+                $differences++
+            }
+        }
         $leftBlocks = $a.candidatePipeline.survivorsByBlock | ConvertTo-Json -Compress
         $rightBlocks = $b.candidatePipeline.survivorsByBlock | ConvertTo-Json -Compress
         if ($leftBlocks -cne $rightBlocks) {

@@ -7,6 +7,26 @@ import org.junit.Test
 import java.time.LocalDate
 
 class RotaDiagnosticEvidenceTest {
+    @Test fun verticalCropVariantsAreDistinctAndBoundedAtImageEdges() {
+        val variants = RotaDiagnosticEvidence.verticalCropVariants(1, 20, 200)
+        assertEquals("original", variants.first().label)
+        assertTrue(variants.any { it.label == "widen_28" })
+        assertTrue(variants.any { it.label == "trim_12" })
+        assertEquals(variants.size, variants.map { it.top to it.bottom }.distinct().size)
+        assertTrue(variants.all { it.top >= 0 && it.bottom < 200 && it.top < it.bottom })
+    }
+
+    @Test fun diagnosticCropExperimentCannotAlterRecognitionDecision() {
+        val variant = RotaDiagnosticEvidence.CropVariantScore(
+            "widen_28", .90f, .92f, .20f, .72f, 0f, .025f)
+        val experiment = RotaDiagnosticEvidence.CropExperiment(
+            2, 1, "ocr_token_band", 7, listOf(variant), .75f)
+        val baseline = RotaDiagnosticEvidence.ProfileDecision(
+            4, 19, 17, .438f, .42f, .55f, .60f, "rejected_below_rescue_floor")
+        assertEquals("rejected_below_rescue_floor", baseline.copy(cropExperiments = listOf(experiment)).status)
+        assertEquals(.438f, baseline.copy(cropExperiments = listOf(experiment)).bestScore ?: 0f, .001f)
+    }
+
     @Test fun emptyCandidateListDoesNotAssertThereWereNoSuggestions() {
         val unseen = RotaDiagnosticEvidence.MarkerSummary()
         assertEquals("not_observed_viewer_not_opened", RotaDiagnosticEvidence.status(unseen))

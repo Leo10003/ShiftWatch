@@ -1024,7 +1024,7 @@ private fun ImportReviewSheet(
                     // Privacy by default: no name, photo, OCR text, exact dates or handwriting
                     // crops. Even the candidate IDs are replaced with local ordinal indices.
                     val result = JSONObject().apply {
-                        put("schemaVersion", 12)
+                        put("schemaVersion", 13)
                         put("appVersion", installedAppVersion)
                         put("sessionId", diagnosticSession)
                         put("captureUtc", java.time.Instant.now().toString())
@@ -1230,6 +1230,30 @@ private fun ImportReviewSheet(
                                         }
                                         put("productionByBlock", JSONArray().apply { addBlockEvidence(decision.productionByBlock) })
                                         put("shadowByBlock", JSONArray().apply { addBlockEvidence(decision.shadowByBlock) })
+                                        put("cropExperiments", JSONArray().apply {
+                                            decision.cropExperiments.forEach { experiment ->
+                                                put(JSONObject().apply {
+                                                    put("physicalBlockIndex", experiment.physicalBlockIndex)
+                                                    put("candidateRankInBlock", experiment.candidateRankInBlock)
+                                                    put("candidateOrigin", experiment.candidateOrigin)
+                                                    put("verticalDecile", experiment.verticalDecile)
+                                                    put("overlapWithOtherTop", experiment.overlapWithOtherTop?.toDouble() ?: JSONObject.NULL)
+                                                    put("variants", JSONArray().apply {
+                                                        experiment.variants.forEach { score ->
+                                                            put(JSONObject().apply {
+                                                                put("variant", score.variant)
+                                                                put("adjustedScore", score.adjustedScore.toDouble())
+                                                                put("positiveScore", score.positiveScore.toDouble())
+                                                                put("confuserScore", score.confuserScore.toDouble())
+                                                                put("rawSeparation", score.rawSeparation.toDouble())
+                                                                put("confuserPenalty", score.confuserPenalty.toDouble())
+                                                                put("separationAdjustment", score.separationAdjustment.toDouble())
+                                                            })
+                                                        }
+                                                    })
+                                                })
+                                            }
+                                        })
                                         put("topCandidates", JSONArray().apply {
                                             decision.rankedCandidates.forEach { candidate ->
                                                 put(JSONObject().apply {
@@ -1340,6 +1364,30 @@ private fun ImportReviewSheet(
                                         }
                                         put("productionByBlock", JSONArray().apply { addBlockEvidence(decision.productionByBlock) })
                                         put("shadowByBlock", JSONArray().apply { addBlockEvidence(decision.shadowByBlock) })
+                                        put("cropExperiments", JSONArray().apply {
+                                            decision.cropExperiments.forEach { experiment ->
+                                                put(JSONObject().apply {
+                                                    put("physicalBlockIndex", experiment.physicalBlockIndex)
+                                                    put("candidateRankInBlock", experiment.candidateRankInBlock)
+                                                    put("candidateOrigin", experiment.candidateOrigin)
+                                                    put("verticalDecile", experiment.verticalDecile)
+                                                    put("overlapWithOtherTop", experiment.overlapWithOtherTop?.toDouble() ?: JSONObject.NULL)
+                                                    put("variants", JSONArray().apply {
+                                                        experiment.variants.forEach { score ->
+                                                            put(JSONObject().apply {
+                                                                put("variant", score.variant)
+                                                                put("adjustedScore", score.adjustedScore.toDouble())
+                                                                put("positiveScore", score.positiveScore.toDouble())
+                                                                put("confuserScore", score.confuserScore.toDouble())
+                                                                put("rawSeparation", score.rawSeparation.toDouble())
+                                                                put("confuserPenalty", score.confuserPenalty.toDouble())
+                                                                put("separationAdjustment", score.separationAdjustment.toDouble())
+                                                            })
+                                                        }
+                                                    })
+                                                })
+                                            }
+                                        })
                                         put("topCandidates", JSONArray().apply {
                                             decision.rankedCandidates.forEach { candidate ->
                                                 put(JSONObject().apply {

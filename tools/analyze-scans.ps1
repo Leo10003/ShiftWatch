@@ -29,7 +29,7 @@ foreach ($r in $reports) {
         elseif ($accepted -and $block -eq $baselineBlocks[$day]) { $hits++ }
     }
     $lines += "- $($r.appVersion): $hits/6 location hits, $fp false suggestions, scan ${seconds}s"
-    $snapshot=($row | ForEach-Object { "$( $_.weekdayColumn):$($_.decision):$($_.topScore):$($_.candidatePipeline | ConvertTo-Json -Compress -Depth 10):$($_.productionByBlock | ConvertTo-Json -Compress -Depth 10):$($_.shadowByBlock | ConvertTo-Json -Compress -Depth 10)" }) -join '\n'
+    $snapshot=($row | ForEach-Object { "$( $_.weekdayColumn):$($_.decision):$($_.topScore):$($_.candidatePipeline | ConvertTo-Json -Compress -Depth 10):$($_.productionByBlock | ConvertTo-Json -Compress -Depth 10):$($_.shadowByBlock | ConvertTo-Json -Compress -Depth 10):$($_.cropExperiments | ConvertTo-Json -Compress -Depth 10)" }) -join '\n'
     if ($null -ne $reference -and $snapshot -cne $reference) { $drift++ }
     if ($null -eq $reference) { $reference=$snapshot }
 }
@@ -89,6 +89,28 @@ foreach($r in $reports) {
         $lines += "| $($r.sessionId.Substring(0,8)) | $($dayNames[$day]) | $production | $shadowText |"
     }
 }
+$lines += '', '## Controlled vertical-crop experiments (schema 13; diagnostic only)', '',
+    'Only two top distinct production candidates in physical block 2 per investigated day are tested. Original crop and any altered crops are scored with the same profile but cannot create suggestions.',
+    '', '| Scan | Day | Rank / origin | Top-2 overlap | Original adjusted / separation | Best altered adjusted / separation |',
+    '|---|---|---|---:|---|---|'
+foreach ($r in $reports) {
+    foreach ($day in @(3,4,5)) {
+        $d=@($r.viewerMarkers.savedProfileDecisions | Where-Object { [int]$_.weekdayColumn -eq $day })[0]
+        if (-not $d.cropExperiments) {
+            $lines += "| $($r.sessionId.Substring(0,8)) | $($dayNames[$day]) | unavailable | n/a | n/a | requires schema 13 |"
+            continue
+        }
+        foreach ($item in $d.cropExperiments) {
+            $original=@($item.variants | Where-Object { $_.variant -eq 'original' } | Select-Object -First 1)
+            $altered=@($item.variants | Where-Object { $_.variant -ne 'original' } | Sort-Object -Property @{Expression='rawSeparation';Descending=$true}, @{Expression='adjustedScore';Descending=$true} | Select-Object -First 1)
+            $origText=if($original.Count -gt 0) { "$([math]::Round([double]$original[0].adjustedScore,3)) / $([math]::Round([double]$original[0].rawSeparation,3))" } else { 'unavailable' }
+            $alteredText=if($altered.Count -gt 0) { "$($altered[0].variant): $([math]::Round([double]$altered[0].adjustedScore,3)) / $([math]::Round([double]$altered[0].rawSeparation,3))" } else { 'unavailable' }
+            $overlap=if($null -ne $item.overlapWithOtherTop) { [math]::Round([double]$item.overlapWithOtherTop,2) } else { 'n/a' }
+            $lines += "| $($r.sessionId.Substring(0,8)) | $($dayNames[$day]) | $($item.candidateRankInBlock) / $($item.candidateOrigin) | $overlap | $origText | $alteredText |"
+        }
+    }
+}
+$lines += '', 'Friday is an OFF control. An increased score is not evidence of correctness. Experimental variants never alter suggestions.'
 $lines += '', 'Never interpret experimental shadow scores as accepted shift suggestions.'
 $report=$lines -join "`n"
 Write-Output $report
