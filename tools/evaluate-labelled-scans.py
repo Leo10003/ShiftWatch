@@ -161,7 +161,8 @@ def evaluate(manifest_path):
                                              f'{fingerprints[fingerprint]}; distinct photo is NOT verified')
                 fingerprints[fingerprint] = cid
             entry['scans'].append({'path': scan, 'production': prod, 'replay': replay,
-                                   'productionDays': p_days, 'replayDays': r_days})
+                                   'productionDays': p_days, 'replayDays': r_days,
+                                   'rows': rows, 'truth': truth, 'fingerprint': fingerprint})
         result.append(entry)
     return result
 
@@ -189,14 +190,126 @@ def markdown(result):
     return '\n'.join(lines)
 
 
+def fmt_score(value):
+    return f'{value:.3f}' if type(value) in (int, float) else 'n/a'
+
+
+def candidate_audit(result):
+    """Label-dependent, read-only candidate evidence; never proposes acceptance."""
+    lines = ['# ShiftWatch labelled missed-candidate audit', '',
+             '**Research only:** rejected working days and accepted OFF days. '
+             'Scores and crop variants are observations, not calibrated probabilities. '
+             'Experimental replay never changes production.', '',
+             'Photos are not available in sanitized exports. Shared OCR fingerprints '
+             'do not establish independent photographic evidence.', '']
+    for case in result:
+        lines += [f'## Case: {case["id"]}', '']
+        seen_fingerprints = set()
+        for scan in case['scans']:
+            fp = scan['fingerprint']
+            duplicate = bool(fp and fp in seen_fingerprints)
+            if fp:
+                seen_fingerprints.add(fp)
+            lines += [f'### Scan: {scan["path"]}', '',
+                      ('**Warning:** OCR fingerprint repeats within this case; '
+                       'additional runs are not independent-photo evidence.' if duplicate else
+                       'OCR geometry fingerprint: ' + (str(fp) if fp else 'unavailable')), '']
+            rows, truth = scan['rows'], scan['truth']
+            problems = [d for d in range(7) if
+                        (truth[d] is not None and not rows[d]['decision'].startswith('accepted_'))
+                        or (truth[d] is None and rows[d]['decision'].startswith('accepted_'))]
+            if not problems:
+                lines += ['No rejected working days or accepted OFF days in this scan.', '']
+                continue
+            for d in problems:
+                row = rows[d]
+                replay = row['shadowReplay']
+                expected = 'OFF' if truth[d] is None else f'block {truth[d]+1}'
+                reason = ('FALSE OFF-DAY SUGGESTION' if truth[d] is None
+                          else 'MISSED WORKING DAY')
+                lines += [f'#### {DAYS[d]} — {reason}', '',
+                          f'Label: {expected}; production: {row["decision"]}; '
+                          f'hypothetical replay: {replay.get("replayStatus", "missing")}.', '',
+                          '| Evidence | Value |', '|---|---:|',
+                          f'| Production top score | {fmt_score(row.get("topScore"))} |',
+                          f'| Production runner score | {fmt_score(row.get("runnerScore"))} |',
+                          f'| Acceptance floor | {fmt_score(row.get("acceptanceFloor"))} |',
+                          f'| Candidate lines / scored | {row.get("candidateLineCount", "n/a")} / {row.get("scoredLineCount", "n/a")} |',
+                          f'| Replay top block (not a suggestion if rejected) | {replay.get("replayWinnerBlock", "n/a")} (zero-based) |',
+                          f'| Replay winner score | {fmt_score(replay.get("replayScore"))} |',
+                          f'| Replay runner / margin | {fmt_score(replay.get("replayRunner"))} / {fmt_score(replay.get("replayMargin"))} |',
+                          f'| Replay trimmed winner | {replay.get("trimmedWinner", "n/a")} |', '']
+                pipeline = row.get('candidatePipeline')
+                if isinstance(pipeline, dict):
+                    lines += [f'Candidate pipeline: final={pipeline.get("finalCandidates", "n/a")}, '
+                              f'OCR={pipeline.get("finalOcrCandidates", "n/a")}, '
+                              f'probes added={pipeline.get("probesAdded", "n/a")}, '
+                              f'ink rejected={pipeline.get("probesInkRejected", "n/a")}.', '']
+                candidates = row.get('topCandidates')
+                if isinstance(candidates, list) and candidates:
+                    lines += ['| Rank | Block | Origin | Adjusted | Positive | Confuser | Raw separation |',
+                              '|---:|---:|---|---:|---:|---:|---:|']
+                    for candidate in candidates[:3]:
+                        if not isinstance(candidate, dict):
+                            continue
+                        block = candidate.get('physicalBlockIndex')
+                        lines.append(f'| {candidate.get("rank", "?")} | '
+                                     f'{block+1 if type(block) is int and block in range(3) else "n/a"} | '
+                                     f'{candidate.get("candidateOrigin", "n/a")} | '
+                                     f'{fmt_score(candidate.get("adjustedScore"))} | '
+                                     f'{fmt_score(candidate.get("positiveScore"))} | '
+                                     f'{fmt_score(candidate.get("confuserScore"))} | '
+                                     f'{fmt_score(candidate.get("rawSeparation"))} |')
+                    lines += ['']
+                experiments = row.get('cropExperiments')
+                if isinstance(experiments, list) and experiments:
+                    lines += ['| Block / rank | Origin | Eligible | Qualified | Original adj. / separation | Trim adj. / separation |',
+                              '|---|---|---|---|---|---|']
+                    for experiment in experiments:
+                        if not isinstance(experiment, dict):
+                            continue
+                        variants = {v.get('variant'): v for v in experiment.get('variants', [])
+                                    if isinstance(v, dict)}
+                        orig, trim = variants.get('original', {}), variants.get('trim_12', {})
+                        block = experiment.get('physicalBlockIndex')
+                        label = f'B{block+1}' if type(block) is int and block in range(3) else 'n/a'
+                        def detail(v):
+                            return f'{fmt_score(v.get("adjustedScore"))} / {fmt_score(v.get("rawSeparation"))}'
+                        lines.append(f'| {label} / {experiment.get("candidateRankInBlock", "?")} | '
+                                     f'{experiment.get("candidateOrigin", "n/a")} | '
+                                     f'{experiment.get("selectiveTrimEligible", "n/a")} | '
+                                     f'{experiment.get("selectiveTrimQualifies", "n/a")} | '
+                                     f'{detail(orig)} | {detail(trim)} |')
+                    lines += ['']
+                else:
+                    lines += ['Crop experiment evidence not exported for this day.', '']
+                if truth[d] is not None and replay.get('replayAccepted'):
+                    winner = replay.get('replayWinnerBlock')
+                    lines += [('**Hypothetical replay:** correct block, still not a production result.'
+                               if type(winner) is int and winner == truth[d] else
+                               '**Caution:** replay accepts a different/unknown block; NOT a recovery.'), '']
+                if truth[d] is None and replay.get('replayAccepted'):
+                    lines += ['**SAFETY FLAG:** hypothetical replay also suggests an OFF day.', '']
+    lines += ['All labels are externally supplied. Same fingerprint and separate session IDs '
+              'establish repeat scans, not independent photos. No training data, names, '
+              'photos or OCR text are required.', '']
+    return '\n'.join(lines)
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--manifest', type=Path, required=True)
     parser.add_argument('--output', type=Path, help='Optional Markdown output filename')
+    parser.add_argument('--candidate-audit', type=Path,
+                        help='Optional separate labelled missed-candidate audit in Markdown')
     args = parser.parse_args(argv)
     try:
         results = evaluate(args.manifest)
         report = markdown(results)
+        if args.candidate_audit and args.output and args.candidate_audit.resolve() == args.output.resolve():
+            raise EvaluationError('Summary and candidate-audit output paths must be different')
+        if args.candidate_audit:
+            args.candidate_audit.write_text(candidate_audit(results), encoding='utf-8')
         if args.output:
             args.output.write_text(report + '\n', encoding='utf-8')
         else:
