@@ -2581,7 +2581,11 @@ private fun ZoomableRotaImage(
         if (visionBusy) return@LaunchedEffect
         if (visionSeeds.isEmpty()) {
             if (assistData.tokens.isEmpty()) {
-                visionMessage = "No OCR regions found • select shifts manually"
+                // Terminal first-run path: empty OCR cannot start handwriting recognition.
+                if (reusedCache == null) {
+                    profileTraceStatus = "skipped_no_ocr_regions"
+                    visionMessage = RotaViewerStatus.noOcrRegions()
+                }
                 return@LaunchedEffect
             }
             val directHits = OfflineRotaVision.ocrNameHits(assistData, employeeName)
@@ -2621,7 +2625,21 @@ private fun ZoomableRotaImage(
                     }
                 }
             }
+            if (directHits.isEmpty() && reusedCache == null && profileTraceStatus == "not_attempted") {
+                // A fresh install has neither OCR name hits nor saved handwriting examples.
+                // Previously this branch fell off the end of LaunchedEffect, leaving the
+                // initial "Analyzing..." message visible until the user taught an example.
+                val terminal = RotaViewerStatus.noDirectHits(
+                    hasSavedProfile = !startupVisionProfile.isNullOrBlank(),
+                    reviewOnly = reviewOnly
+                )
+                profileTraceStatus = terminal.status
+                visionMessage = terminal.message
+            }
             if (directHits.isNotEmpty()) {
+                if (profileTraceStatus == "not_attempted" && reusedCache == null) {
+                    profileTraceStatus = if (reviewOnly) "skipped_review_only" else "skipped_ocr_matches"
+                }
                 visionBusy = true
                 visionSeeds = directHits.map { Offset(it.x, it.y) }
                 val directMarkers = directHits.map { hit ->
