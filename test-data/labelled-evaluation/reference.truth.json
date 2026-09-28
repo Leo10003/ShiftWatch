@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "shifts": [
+    {"weekday": 0, "physicalBlock": 0},
+    {"weekday": 1, "physicalBlock": 2},
+    {"weekday": 2, "physicalBlock": 2},
+    {"weekday": 3, "physicalBlock": 2},
+    {"weekday": 5, "physicalBlock": 2},
+    {"weekday": 6, "physicalBlock": 2}
+  ],
+  "offWeekdays": [4]
+}

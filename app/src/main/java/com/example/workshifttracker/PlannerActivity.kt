@@ -983,7 +983,9 @@ private fun ImportReviewSheet(
                 }
                 // Only explicit action writes this file; no silent diagnostic harvesting.
                 val exported = runCatching {
-                    resolver.openOutputStream(uri)?.use { it.write(payload.toString(2).toByteArray(Charsets.UTF_8)) }
+                    val stream = resolver.openOutputStream(uri, "wt")
+                        ?: error("The selected destination cannot be written")
+                    stream.use { it.write(payload.toString(2).toByteArray(Charsets.UTF_8)) }
                 }
                 if (exported.isFailure) withContext(Dispatchers.Main) {
                     assistMessage = "Unable to export that file. Please choose another location."
@@ -1475,7 +1477,7 @@ private fun ImportReviewSheet(
                             }
                         })
                     }
-                    val stream = context.contentResolver.openOutputStream(uri)
+                    val stream = context.contentResolver.openOutputStream(uri, "wt")
                         ?: error("The selected destination cannot be written")
                     stream.use { out -> out.write(result.toString(2).toByteArray(Charsets.UTF_8)) }
                     withContext(Dispatchers.Main) {

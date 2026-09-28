@@ -6,7 +6,11 @@ Usage: .\tools\analyze-scans.ps1 -Paths .\scan1.json,.\scan2.json -Output .\repo
 param([Parameter(Mandatory=$true)][string[]]$Paths, [string]$Output)
 $ErrorActionPreference = 'Stop'
 if ($Paths.Count -lt 2) { throw 'Supply at least two independent diagnostic exports' }
-$reports = @($Paths | ForEach-Object { Get-Content -LiteralPath $_ -Raw | ConvertFrom-Json })
+$reports = @($Paths | ForEach-Object {
+    $path = $_
+    try { Get-Content -LiteralPath $path -Raw | ConvertFrom-Json }
+    catch { throw "${path}: invalid or mixed JSON export. Re-export as a new file (ShiftWatch v20.8.15 or newer); do not concatenate confirmed examples with scan diagnostics. $($_.Exception.Message)" }
+})
 $ids = @($reports | ForEach-Object { $_.sessionId } | Select-Object -Unique)
 $runs = @($reports | ForEach-Object { $_.viewerMarkers.recognitionRunId } | Select-Object -Unique)
 if ($ids.Count -ne $reports.Count -or $runs.Count -ne $reports.Count) { throw 'Not independent scans: repeated session or run ID' }
@@ -121,6 +125,27 @@ foreach ($r in $reports) {
 }
 $lines += '', 'An OFF control passing this experimental gate invalidates the proposed gate for production. A single OFF control passing is not the only possible failure: validate on other photographs and negative profiles.',
     'A gate-qualified crop is NOT an accepted shift. Normal production ranking, runner margin and confuser policies would still apply in any future trial.'
+$lines += '', '## Shadow full-week decision replay (schema 15; hypothetical only)', '',
+    'This section is a simulation, not an app suggestion. Check baseline parity before interpreting changes.', '',
+    '| Scan | Day | Production | Replay | Winning block | Score / runner / margin | Trimmed winner | Baseline parity |',
+    '|---|---|---|---|---:|---|---|---|'
+foreach ($r in $reports) {
+    foreach ($day in 0..6) {
+        $d=@($r.viewerMarkers.savedProfileDecisions | Where-Object { [int]$_.weekdayColumn -eq $day })[0]
+        $short=([string]$r.sessionId).Substring(0,[math]::Min(8,([string]$r.sessionId).Length))
+        if ([int]$r.schemaVersion -lt 15 -or $null -eq $d.shadowReplay) {
+            $lines += "| $short | $($dayNames[$day]) | $($d.decision) | unavailable | n/a | n/a | n/a | requires schema 15 |"
+            continue
+        }
+        $replay=$d.shadowReplay
+        $block=if ($null -ne $replay.replayWinnerBlock) { $replay.replayWinnerBlock } else { 'none' }
+        $runner=if ($null -ne $replay.replayRunner) { [math]::Round([double]$replay.replayRunner,3) } else { 'none' }
+        $margin=if ($null -ne $replay.replayMargin) { [math]::Round([double]$replay.replayMargin,3) } else { 'none' }
+        $score=if ($null -ne $replay.replayScore) { [math]::Round([double]$replay.replayScore,3) } else { 'none' }
+        $parity=if ($replay.baselineParity -eq $true) { 'PASS' } else { '**FAIL — disregard replay**' }
+        $lines += "| $short | $($dayNames[$day]) | $($replay.originalStatus) | $($replay.replayStatus) | $block | $score / $runner / $margin | $($replay.trimmedWinner) | $parity |"
+    }
+}
 $lines += '', 'Never interpret experimental shadow scores as accepted shift suggestions.'
 $report=$lines -join "`n"
 Write-Output $report

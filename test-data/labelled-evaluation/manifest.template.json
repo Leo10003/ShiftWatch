@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "cases": [
+    {
+      "id": "my-reference-photo",
+      "groundTruth": "reference.truth.json",
+      "scans": ["scan1.json", "scan2.json"]
+    }
+  ]
+}
