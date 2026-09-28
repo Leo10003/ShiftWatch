@@ -29,6 +29,12 @@ class RotaViewerStatusTest {
             RotaViewerStatus.completedSuggestions(0))
     }
 
+    @Test fun nameLookupExceptionIsTerminalAndDistinctFromNoHits() {
+        val result = RotaViewerStatus.nameLookupFailed()
+        assertEquals("failed_ocr_name_lookup", result.status)
+        assertEquals("Name recognition could not finish • select shifts manually or retry", result.message)
+    }
+
     @Test fun restoredSuggestionsHaveCompletedStatus() {
         assertEquals("Recognition complete • 1 suggestion awaits confirmation",
             RotaViewerStatus.completedSuggestions(1))

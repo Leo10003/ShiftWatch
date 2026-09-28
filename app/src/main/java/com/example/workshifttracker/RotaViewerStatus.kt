@@ -13,6 +13,11 @@ internal object RotaViewerStatus {
 
     fun noOcrRegions(): String = "No OCR regions found • select shifts manually"
 
+    /** A failed name lookup is not an empty result and must always end bootstrap visibly. */
+    fun nameLookupFailed(): TerminalState = TerminalState(
+        "failed_ocr_name_lookup", "Name recognition could not finish • select shifts manually or retry"
+    )
+
     fun completedSuggestions(count: Int): String = when (count) {
         0 -> "Recognition complete • no automatic matches • select shifts manually"
         1 -> "Recognition complete • 1 suggestion awaits confirmation"

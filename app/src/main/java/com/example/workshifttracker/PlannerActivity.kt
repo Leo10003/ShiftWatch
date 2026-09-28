@@ -2579,6 +2579,7 @@ private fun ZoomableRotaImage(
         // Avoid running the saved-profile matcher and OCR-bootstrap matcher at the same time.
         // They both scan the full rota and previously could overlap during first composition.
         if (visionBusy) return@LaunchedEffect
+        try {
         if (visionSeeds.isEmpty()) {
             if (assistData.tokens.isEmpty()) {
                 // Terminal first-run path: empty OCR cannot start handwriting recognition.
@@ -2588,8 +2589,21 @@ private fun ZoomableRotaImage(
                 }
                 return@LaunchedEffect
             }
-            val directHits = OfflineRotaVision.ocrNameHits(assistData, employeeName)
-                .filter { it.exact || it.score >= 0.84f }
+            // A failed OCR name lookup must not abandon the first-run viewer in its
+            // initial "Analyzing" state. Preserve the input and fall back to manual
+            // selection instead of interpreting an exception as zero name hits.
+            val directHits = try {
+                OfflineRotaVision.ocrNameHits(assistData, employeeName)
+                    .filter { it.exact || it.score >= 0.84f }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                if (reusedCache == null) {
+                    profileTraceStatus = RotaViewerStatus.nameLookupFailed().status
+                    visionMessage = RotaViewerStatus.nameLookupFailed().message
+                }
+                return@LaunchedEffect
+            }
             ocrHitCounts = (0..6).map { column -> directHits.count { it.column == column } }
             // Single bootstrap owner: saved-profile matching runs BEFORE OCR-based visual
             // expansion, never in a competing LaunchedEffect. This also allows OCR expansion
@@ -2688,6 +2702,11 @@ private fun ZoomableRotaImage(
                 }
                 visionBusy = false
             }
+        }
+        } finally {
+            // LaunchedEffect can be cancelled when final OCR inputs or the current
+            // employee change. Never strand a resumed viewer behind a stale busy flag.
+            visionBusy = false
         }
     }
 
