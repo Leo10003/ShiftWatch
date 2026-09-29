@@ -1030,7 +1030,7 @@ private fun ImportReviewSheet(
                     // Privacy by default: no name, photo, OCR text, exact dates or handwriting
                     // crops. Even the candidate IDs are replaced with local ordinal indices.
                     val result = JSONObject().apply {
-                        put("schemaVersion", 15)
+                        put("schemaVersion", 16)
                         put("appVersion", installedAppVersion)
                         put("sessionId", diagnosticSession)
                         put("captureUtc", java.time.Instant.now().toString())
@@ -1421,6 +1421,24 @@ private fun ImportReviewSheet(
                                                             })
                                                         }
                                                     })
+                                                })
+                                            }
+                                        })
+                                        // Every already-scored production crop, in production rank order.
+                                        // No OCR text, name, pixel array, or exact coordinates are exported.
+                                        put("completeProductionCandidates", JSONArray().apply {
+                                            decision.completeProductionCandidates.forEach { candidate ->
+                                                put(JSONObject().apply {
+                                                    put("rank", candidate.rank)
+                                                    put("physicalBlockIndex", candidate.physicalBlockIndex ?: JSONObject.NULL)
+                                                    put("verticalDecile", candidate.verticalDecile)
+                                                    put("adjustedScore", candidate.adjustedScore.toDouble())
+                                                    put("positiveScore", candidate.positiveScore.toDouble())
+                                                    put("confuserScore", candidate.confuserScore.toDouble())
+                                                    put("rawSeparation", candidate.rawSeparation.toDouble())
+                                                    put("confuserPenalty", candidate.confuserPenalty.toDouble())
+                                                    put("separationAdjustment", candidate.separationAdjustment.toDouble())
+                                                    put("candidateOrigin", candidate.candidateOrigin)
                                                 })
                                             }
                                         })

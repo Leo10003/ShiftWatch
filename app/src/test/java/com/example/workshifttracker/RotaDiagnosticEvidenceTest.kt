@@ -7,6 +7,27 @@ import org.junit.Test
 import java.time.LocalDate
 
 class RotaDiagnosticEvidenceTest {
+    @Test fun completeEvidencePreservesEveryProductionCandidateAndAssignsRanks() {
+        // Candidate construction requires rank >= 1. Deliberately give every input
+        // the same valid rank to verify that the export assigns contiguous ranks.
+        val rows = listOf(
+            RotaDiagnosticEvidence.RankedProfileCandidate(1, 0, 2, .80f, .80f, .20f,
+                rawSeparation=.60f, candidateOrigin="ocr_token_band"),
+            RotaDiagnosticEvidence.RankedProfileCandidate(1, null, 4, .60f, .70f, .65f,
+                rawSeparation=.05f, candidateOrigin="ink_gap_probe"),
+            RotaDiagnosticEvidence.RankedProfileCandidate(1, 2, 7, .40f, .52f, .54f,
+                rawSeparation=-.02f, candidateOrigin="ink_gap_probe"),
+            RotaDiagnosticEvidence.RankedProfileCandidate(1, 1, 5, .30f, .42f, .50f,
+                rawSeparation=-.08f, candidateOrigin="ocr_token_band")
+        )
+        val all = RotaDiagnosticEvidence.completeCandidateEvidence(rows)
+        assertEquals(listOf(1, 2, 3, 4), all.map { it.rank })
+        assertEquals(rows.map { it.physicalBlockIndex }, all.map { it.physicalBlockIndex })
+        assertEquals(rows.map { it.rawSeparation }, all.map { it.rawSeparation })
+        assertEquals(rows.map { it.candidateOrigin }, all.map { it.candidateOrigin })
+        assertEquals(3, all.take(3).size)
+    }
+
     @Test fun verticalCropVariantsAreDistinctAndBoundedAtImageEdges() {
         val variants = RotaDiagnosticEvidence.verticalCropVariants(1, 20, 200)
         assertEquals("original", variants.first().label)

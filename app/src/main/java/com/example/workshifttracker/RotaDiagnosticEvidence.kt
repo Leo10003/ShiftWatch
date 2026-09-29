@@ -80,7 +80,7 @@ internal object RotaDiagnosticEvidence {
         val candidateOrigin: String = "unknown"
     ) {
         init {
-            require(rank in 1..3 && verticalDecile in 0..9)
+            require(rank >= 1 && verticalDecile in 0..9)
             require(physicalBlockIndex == null || physicalBlockIndex >= 0)
             require(adjustedScore in 0f..1f && positiveScore in 0f..1f && confuserScore in 0f..1f)
             require(rawSeparation in -1f..1f && confuserPenalty in 0f..1f)
@@ -224,6 +224,13 @@ internal object RotaDiagnosticEvidence {
                     runner?.copy(rank = 2), runner?.let { ordered[0].adjustedScore - it.adjustedScore })
             }
 
+    /** Export each already-scored production crop in the exact production order.
+     * Diagnostic only; never consulted by matching, replay, or learning.
+     * These rows contain neither OCR text nor exact image coordinates.
+     */
+    fun completeCandidateEvidence(ordered: List<RankedProfileCandidate>): List<RankedProfileCandidate> =
+        ordered.mapIndexed { index, row -> row.copy(rank = index + 1) }
+
     /** Anonymous candidate crop experiments: scores are never used for shift acceptance. */
     data class VerticalCrop(val label: String, val top: Int, val bottom: Int)
     data class CropVariantScore(
@@ -300,6 +307,7 @@ internal object RotaDiagnosticEvidence {
         val confuserScore: Float?,
         val status: String,
         val rankedCandidates: List<RankedProfileCandidate> = emptyList(),
+        val completeProductionCandidates: List<RankedProfileCandidate> = emptyList(),
         val runnerOverlapFraction: Float? = null,
         val runnerIsSamePhysicalBlock: Boolean? = null,
         val candidateSources: List<CandidateSourceEvidence> = emptyList(),

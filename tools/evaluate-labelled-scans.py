@@ -228,7 +228,7 @@ def evaluate(manifest_path):
                                    'productionDays': p_days, 'replayDays': r_days,
                                    'rows': rows, 'truth': truth, 'truthTimes': truth_times,
                                    'timeBands': structural_time_rows(doc, p),
-                                   'fingerprint': fingerprint})
+                                   'fingerprint': fingerprint, 'schemaVersion': doc.get('schemaVersion')})
         result.append(entry)
     return result
 
@@ -684,6 +684,137 @@ def block_coverage_report(result):
     return '\n'.join(lines)
 
 
+def _validated_complete_candidates(row, source, weekday):
+    """Reject incomplete/misleading schema-16 exports before any fixed comparison.
+
+    This is every *scored production* crop, not every generated crop or shadow OCR.
+    """
+    full = row.get('completeProductionCandidates')
+    count = row.get('scoredLineCount')
+    require(isinstance(full, list) and type(count) is int and count >= 0,
+            f'{source} {DAYS[weekday]}: requires v20.8.27 complete scored production export')
+    require(len(full) == count,
+            f'{source} {DAYS[weekday]}: complete candidate count does not match scoredLineCount')
+    fields = ('adjustedScore', 'positiveScore', 'confuserScore', 'rawSeparation',
+              'confuserPenalty', 'separationAdjustment')
+    for index, candidate in enumerate(full):
+        require(isinstance(candidate, dict) and type(candidate.get('rank')) is int
+                and candidate['rank'] == index + 1,
+                f'{source} {DAYS[weekday]}: invalid complete candidate order/rank')
+        block = candidate.get('physicalBlockIndex')
+        require(block is None or (type(block) is int and block >= 0),
+                f'{source} {DAYS[weekday]}: invalid physical block')
+        require(type(candidate.get('verticalDecile')) is int
+                and 0 <= candidate['verticalDecile'] <= 9
+                and candidate.get('candidateOrigin') in ('ocr_token_band', 'ink_gap_probe')
+                and all(_finite_number(candidate.get(field)) for field in fields),
+                f'{source} {DAYS[weekday]}: incomplete or non-finite candidate evidence')
+    top = row.get('topCandidates')
+    require(isinstance(top, list) and len(top) == min(3, count),
+            f'{source} {DAYS[weekday]}: missing/incomplete production top-three')
+    for a, b in zip(full, top):
+        require(all(a.get(k) == b.get(k) for k in ('rank', 'physicalBlockIndex',
+                 'verticalDecile', 'candidateOrigin', *fields)),
+                f'{source} {DAYS[weekday]}: complete candidates disagree with production top three')
+    require(all(full[i]['adjustedScore'] >= full[i + 1]['adjustedScore']
+                for i in range(len(full) - 1)),
+            f'{source} {DAYS[weekday]}: candidates not in production adjusted-score order')
+    summary = row.get('productionByBlock')
+    require(isinstance(summary, list), f'{source} {DAYS[weekday]}: missing production block summaries')
+    by_block = {}
+    for item in full:
+        b = item['physicalBlockIndex']
+        if b is not None:
+            by_block.setdefault(b, []).append(item)
+    seen = set()
+    for item in summary:
+        require(isinstance(item, dict) and type(item.get('physicalBlockIndex')) is int,
+                f'{source} {DAYS[weekday]}: malformed block summary')
+        block = item['physicalBlockIndex']
+        require(block in by_block and block not in seen and
+                type(item.get('candidateCount')) is int and
+                item['candidateCount'] == len(by_block[block]) and
+                isinstance(item.get('best'), dict) and
+                _finite_number(item['best'].get('adjustedScore')) and
+                abs(item['best']['adjustedScore'] - by_block[block][0]['adjustedScore']) < 1e-5,
+                f'{source} {DAYS[weekday]}: production block summaries disagree with complete export')
+        seen.add(block)
+    require(seen == set(by_block),
+            f'{source} {DAYS[weekday]}: production block summary coverage mismatch')
+    return full
+
+
+def _complete_order(full, score_field, ocr_only=False):
+    """Fixed, label-blind maximum within the three labelled blocks only.
+
+    Preserve out-of-layout scored crops in validation and coverage, but never
+    reinterpret them as a fourth labelled working-day block.
+    """
+    best = {}
+    for item in full:
+        block = item['physicalBlockIndex']
+        if block is None or block > 2 or (ocr_only and item['candidateOrigin'] != 'ocr_token_band'):
+            continue
+        value = item[score_field]
+        best[block] = max(value, best.get(block, float('-inf')))
+    return sorted(best.items(), key=lambda item: (-item[1], item[0]))
+
+
+def complete_candidate_report(result):
+    """All-scored-crop diagnostic rankings; *never* a replacement production decision."""
+    variants = [('Adjusted', 'adjustedScore', False),
+                ('Positive only', 'positiveScore', False),
+                ('Raw separation', 'rawSeparation', False),
+                ('OCR-origin adjusted only', 'adjustedScore', True)]
+    lines = ['# ShiftWatch complete scored-candidate comparison', '',
+             '**Research only:** all *successfully scored production* crops per weekday, '
+             'not unscored generated candidates and not the separate shadow-OCR stream. '
+             'Fixed ranking rules use no ground-truth labels; labels annotate findings only. '
+             'No acceptance threshold, OFF safeguard, duplicate suppression or other '
+             'production gate is simulated. Scores are not probabilities.', '']
+    seen_fingerprints = set()
+    for case in result:
+        lines += [f'## Case: {case["id"]}', '']
+        for scan in case['scans']:
+            lines += [f'### Automatic export: {scan["path"]}', '']
+            if scan['fingerprint'] and scan['fingerprint'] in seen_fingerprints:
+                lines += ['**Warning:** repeated OCR geometry; not an independent photo.', '']
+            if scan['fingerprint']:
+                seen_fingerprints.add(scan['fingerprint'])
+            require(scan.get('schemaVersion', 16) >= 16,
+                    f'{scan["path"]}: complete candidates require scan schemaVersion >= 16')
+            lines += ['| Day | Label / production | Scored / OCR | ' +
+                      ' | '.join(v[0] for v in variants) + ' |',
+                      '|---|---|---:|' + '|'.join('---' for _ in variants) + '|']
+            for day in range(7):
+                row = scan['rows'][day]
+                full = _validated_complete_candidates(row, scan['path'], day)
+                label = scan['truth'][day]
+                summaries = []
+                for _, field, ocr_only in variants:
+                    ordering = _complete_order(full, field, ocr_only)
+                    if not ordering:
+                        summaries.append('no scored candidates' if not ocr_only else 'no scored OCR-origin crops')
+                        continue
+                    winner, score = ordering[0]
+                    if label is None:
+                        observation = 'OFF control; no acceptance tested'
+                    else:
+                        ranks = [i+1 for i, (block, _) in enumerate(ordering) if block == label]
+                        observation = f'label rank {ranks[0]}' if ranks else 'label absent from scored subset'
+                    summaries.append(f'B{winner+1} / {score:.3f}; {observation}')
+                count_ocr = sum(c['candidateOrigin'] == 'ocr_token_band' for c in full)
+                known = 'OFF' if label is None else f'B{label+1}'
+                lines += [f'| {DAYS[day]} | {known} / {row["decision"]} | '
+                          f'{len(full)} / {count_ocr} | ' + ' | '.join(summaries) + ' |']
+            lines += ['', 'A different leading block is a **hypothetical ranking observation**, '
+                      'not a recovered or incorrectly accepted shift. Inspect every day, '
+                      'especially OFF controls and previously correct ink-probe days.', '']
+    lines += ['Independent photographs and labelled rosters are required before changing '
+              'recognition, time detection or OFF logic.', '']
+    return '\n'.join(lines)
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--manifest', type=Path, required=True)
@@ -698,15 +829,19 @@ def main(argv=None):
                         help='Optional fixed-rule top-three ranking comparison; never accepts shifts')
     parser.add_argument('--block-coverage', type=Path,
                         help='Optional top-three versus full per-block and shadow OCR coverage audit')
+    parser.add_argument('--complete-candidates', type=Path,
+                        help='Optional complete production scored-crop comparison (schema 16+ only)')
     args = parser.parse_args(argv)
     try:
         results = evaluate(args.manifest)
         report = markdown(results)
         destinations = [p.resolve() for p in (args.candidate_audit, args.output,
                                               args.time_evidence, args.ranking_safety,
-                                              args.score_ablation, args.block_coverage) if p]
+                                              args.score_ablation, args.block_coverage,
+                                              args.complete_candidates) if p]
         if len(destinations) != len(set(destinations)):
             raise EvaluationError('All report output paths must differ')
+        complete_report = complete_candidate_report(results) if args.complete_candidates else None
         if args.candidate_audit:
             args.candidate_audit.write_text(candidate_audit(results), encoding='utf-8')
         if args.time_evidence:
@@ -717,6 +852,8 @@ def main(argv=None):
             args.score_ablation.write_text(score_ablation_report(results) + '\n', encoding='utf-8')
         if args.block_coverage:
             args.block_coverage.write_text(block_coverage_report(results) + '\n', encoding='utf-8')
+        if args.complete_candidates:
+            args.complete_candidates.write_text(complete_report + '\n', encoding='utf-8')
         if args.output:
             args.output.write_text(report + '\n', encoding='utf-8')
         else:

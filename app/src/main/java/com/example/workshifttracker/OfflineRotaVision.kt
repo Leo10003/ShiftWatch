@@ -467,6 +467,7 @@ internal object OfflineRotaVision {
             val ranked = candidates.mapNotNull(::scoreCandidate).sortedWith(compareByDescending<Ranked> { it.score }
                 .thenBy { it.candidate.band.top }.thenBy { it.candidate.band.bottom })
             val productionByBlock = RotaDiagnosticEvidence.blockScoreEvidence(ranked.map(::evidenceRow))
+            val completeProductionCandidates = RotaDiagnosticEvidence.completeCandidateEvidence(ranked.map(::evidenceRow))
             // Diagnostic-only cross-day control: inspect the two strongest distinct candidates
             // in physical block 2 for EVERY column, including OFF days. This is a reference-
             // layout experiment, not a weekday-specific matching exception. Only an OCR-derived
@@ -542,7 +543,8 @@ internal object OfflineRotaVision {
                     if (candidates.isEmpty()) "no_candidate_lines" else "no_usable_signatures",
                     pipeline = cachedCandidateTrace(bitmap, assist, column, left, right),
                     shadowOcr = shadowEvidence, productionByBlock = productionByBlock,
-                    shadowByBlock = shadowByBlock, cropExperiments = cropExperiments)
+                    shadowByBlock = shadowByBlock, cropExperiments = cropExperiments,
+                    completeProductionCandidates = completeProductionCandidates)
                 continue
             }
             val runner = ranked.getOrNull(1)?.score ?: 0f
@@ -597,7 +599,8 @@ internal object OfflineRotaVision {
                         separationAdjustment = item.separationAdjustment,
                         candidateOrigin = if (item.candidate.ocrText == null) "ink_gap_probe" else "ocr_token_band"
                     )
-                }, runnerOverlapFraction = runnerOverlap, runnerIsSamePhysicalBlock = runnerSameBlock,
+                }, completeProductionCandidates = completeProductionCandidates,
+                runnerOverlapFraction = runnerOverlap, runnerIsSamePhysicalBlock = runnerSameBlock,
                 pipeline = cachedCandidateTrace(bitmap, assist, column, left, right),
                 shadowOcr = shadowEvidence,
                 productionByBlock = productionByBlock, shadowByBlock = shadowByBlock,
