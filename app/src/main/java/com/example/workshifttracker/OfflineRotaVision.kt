@@ -431,13 +431,11 @@ internal object OfflineRotaVision {
                     val boundary = RotaIdentityPolicy.boundary(profiles.size, model.negatives.size, negative)
                     confuserPenalty = boundary.confuserPenalty
                     score -= confuserPenalty
-                    if (separation < boundary.requiredSeparation) {
-                        separationAdjustment = -0.12f
-                        score += separationAdjustment
-                    } else if (separation > boundary.requiredSeparation + 0.13f) {
-                        separationAdjustment = 0.025f
-                        score += separationAdjustment
-                    }
+                    // Same branch and constants as before, now independently testable.
+                    // Apply it after the separate confuser penalty, using PRE-penalty separation.
+                    separationAdjustment = RotaDiagnosticEvidence.separationTrace(
+                        separation, boundary.requiredSeparation).adjustment
+                    score += separationAdjustment
                 }
                 return Ranked(candidate, score.coerceIn(0f, 1f), positive, negative, score - negative,
                     rawSeparation, confuserPenalty, separationAdjustment)

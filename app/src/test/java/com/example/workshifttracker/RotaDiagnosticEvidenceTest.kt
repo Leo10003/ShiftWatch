@@ -7,6 +7,40 @@ import org.junit.Test
 import java.time.LocalDate
 
 class RotaDiagnosticEvidenceTest {
+    @Test fun separationBranchPreservesStrictProductionBoundaries() {
+        fun trace(raw: Float, required: Float) =
+            RotaDiagnosticEvidence.separationTrace(raw, required)
+        assertEquals("below_required_separation", trace(.031f, .05f).branch)
+        assertEquals(-.12f, trace(.031f, .05f).adjustment, .00001f)
+        assertEquals(0f, trace(.05f, .05f).adjustment, .00001f)
+        // Derive the upper boundary using production's Float arithmetic.
+        val upper = .05f + .13f
+        assertEquals("within_separation_band", trace(upper, .05f).branch)
+        assertEquals(0f, trace(upper, .05f).adjustment, .00001f)
+        val aboveUpper = java.lang.Math.nextUp(upper)
+        assertEquals("strong_separation_bonus", trace(aboveUpper, .05f).branch)
+        assertEquals(.025f, trace(aboveUpper, .05f).adjustment, .00001f)
+    }
+
+    @Test fun adjustmentDependsOnLearnedBoundaryNotWeekdayOrPositiveRawAlone() {
+        // Illustrative raw values from diagnostic reports; boundary values are
+        // synthetic, because the private export doesn't expose requiredSeparation.
+        val positiveRaw = .031f
+        assertEquals(-.12f, RotaDiagnosticEvidence.separationTrace(positiveRaw, .05f).adjustment, .00001f)
+        assertEquals(0f, RotaDiagnosticEvidence.separationTrace(positiveRaw, .03f).adjustment, .00001f)
+        // Negative OFF-day evidence is never made positive by the branch itself.
+        assertEquals(-.12f, RotaDiagnosticEvidence.separationTrace(-.024f, .05f).adjustment, .00001f)
+        assertEquals(-.12f, RotaDiagnosticEvidence.separationTrace(-.002f, .05f).adjustment, .00001f)
+    }
+
+    @Test fun confuserPenaltyRemainsIndependentOfSeparationAdjustment() {
+        val positive = .60f
+        val penalty = .04f
+        val trace = RotaDiagnosticEvidence.separationTrace(.02f, .05f)
+        val expected = (positive - penalty + trace.adjustment).coerceIn(0f, 1f)
+        assertEquals(.44f, expected, .00001f)
+        assertEquals(-.12f, trace.adjustment, .00001f)
+    }
     @Test fun completeEvidencePreservesEveryProductionCandidateAndAssignsRanks() {
         // Candidate construction requires rank >= 1. Deliberately give every input
         // the same valid rank to verify that the export assigns contiguous ranks.

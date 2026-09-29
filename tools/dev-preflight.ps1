@@ -65,7 +65,7 @@ if ($fixture.baseline.Count -ne 7 -or
     throw 'Sanitized recognition baseline is invalid'
 }
 Write-Host 'PASS: sanitized reference metadata (5/6, Friday protected).'
-if ($Diagnostics.Count -gt 0) {
+if (@($Diagnostics | Where-Object { $null -ne $_ }).Count -gt 0) {
     & "$PSScriptRoot\analyze-scans.ps1" -Paths $Diagnostics
     if ($LASTEXITCODE -ne 0) { throw 'Diagnostic comparison failed' }
 }

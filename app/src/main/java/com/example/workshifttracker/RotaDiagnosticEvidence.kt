@@ -9,6 +9,17 @@ import java.time.temporal.ChronoUnit
  * Numbers describe *hypotheses*, never verified truth.
  */
 internal object RotaDiagnosticEvidence {
+    /** Exact production separation branch; raw separation is measured BEFORE confuser penalty.
+     * This describes an adjustment, not a decision to accept a shift. Keep the strict
+     * comparisons aligned with the original OfflineRotaVision scoring path.
+     */
+    data class SeparationTrace(val adjustment: Float, val branch: String)
+
+    fun separationTrace(rawSeparation: Float, requiredSeparation: Float): SeparationTrace = when {
+        rawSeparation < requiredSeparation -> SeparationTrace(-0.12f, "below_required_separation")
+        rawSeparation > requiredSeparation + 0.13f -> SeparationTrace(0.025f, "strong_separation_bonus")
+        else -> SeparationTrace(0f, "within_separation_band")
+    }
     data class MarkerSummary(
         val viewerOpened: Boolean = false,
         val recognitionRunId: String? = null,
