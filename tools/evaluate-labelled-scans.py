@@ -589,6 +589,101 @@ def score_ablation_report(result):
     return '\n'.join(lines)
 
 
+
+
+def _block_summary(raw):
+    """Validate and retain exported per-block summaries, not individual crops.
+
+    productionByBlock and shadowByBlock are separate exported diagnostic streams;
+    the latter is NOT the complete production OCR subset.
+    """
+    if not isinstance(raw, list):
+        return None
+    blocks = {}
+    for entry in raw:
+        if not isinstance(entry, dict):
+            continue
+        block = entry.get('physicalBlockIndex')
+        best = entry.get('best')
+        if type(block) is not int or not 0 <= block <= 2 or block in blocks:
+            continue
+        if not isinstance(best, dict) or not _finite_number(best.get('adjustedScore')):
+            continue
+        blocks[block] = {'count': entry.get('candidateCount'),
+                         'adjusted': best['adjustedScore'],
+                         'positive': best.get('positiveScore'),
+                         'separation': best.get('rawSeparation'),
+                         'origin': best.get('candidateOrigin')}
+    return blocks
+
+
+def _block_listing(blocks, include_origin=True):
+    if blocks is None:
+        return 'not exported'
+    if not blocks:
+        return 'no valid block summaries'
+    entries = []
+    for block, summary in sorted(blocks.items()):
+        suffix = f' ({summary["origin"]})' if include_origin and summary['origin'] else ''
+        entries.append(f'B{block + 1}={fmt_score(summary["adjusted"])}{suffix}')
+    return '; '.join(entries)
+
+
+def block_coverage_report(result):
+    """Reconcile top-three crops with full production block summaries and shadow OCR.
+
+    Full block entries summarize the *best by adjusted score*, not all candidate
+    crops. Their raw separation and positive scores cannot be independently
+    maximized, and shadow OCR is not a reconstructed OCR-only production run.
+    """
+    lines = ['# ShiftWatch exported block-evidence coverage', '',
+             '**Research only:** reconciles truncated top-three crops with per-block '
+             'production-best summaries and separate shadow-OCR summaries. Neither '
+             'summary contains every individual crop. No thresholds, acceptance gates, '
+             'OFF logic or alternative production rankings are replayed.', '',
+             'Each full-block value below is the **adjusted-score winner for that block**. '
+             'Its positive score and raw separation belong to that same crop; they are '
+             'NOT the maximum positive or maximum separation among all candidates. '
+             'Shadow OCR is a separate diagnostic stream, NOT the complete production '
+             'OCR-only ranking. An absent summary is not proof that no crop existed.', '']
+    for case in result:
+        lines += [f'## Case: {case["id"]}', '']
+        seen = set()
+        for scan in case['scans']:
+            lines += [f'### Automatic export: {scan["path"]}', '']
+            fp = scan['fingerprint']
+            if fp and fp in seen:
+                lines += ['**Warning:** repeated OCR fingerprint; not independent photographic evidence.', '']
+            if fp:
+                seen.add(fp)
+            lines += ['| Day | Label / production | Top-three distinct blocks | Full production best per block | '
+                      'Full blocks absent from top three | Separate shadow OCR best per block |',
+                      '|---|---|---|---|---|---|']
+            for d in range(7):
+                row = scan['rows'][d]
+                label = 'OFF' if scan['truth'][d] is None else f'B{scan["truth"][d]+1}'
+                exported = row.get('topCandidates')
+                visible = {c['physicalBlockIndex'] for c in exported[:3]
+                           if isinstance(c, dict) and type(c.get('physicalBlockIndex')) is int
+                           and 0 <= c['physicalBlockIndex'] <= 2} if isinstance(exported, list) else set()
+                full = _block_summary(row.get('productionByBlock'))
+                shadow = _block_summary(row.get('shadowByBlock'))
+                observed = ', '.join(f'B{b+1}' for b in sorted(visible)) if visible else 'none exported'
+                missing = ('not observable' if full is None else
+                           ', '.join(f'B{b+1}' for b in sorted(full.keys() - visible)) or 'none')
+                lines.append(f'| {DAYS[d]} | {label} / {row.get("decision", "unknown")} | '
+                             f'{observed} | {_block_listing(full)} | {missing} | '
+                             f'{_block_listing(shadow, False)} |')
+            lines += ['', '**Interpretation:** missing full-production blocks show why top-three '
+                      'comparisons are incomplete. A strong ink-gap production winner alongside '
+                      'weak shadow OCR is a diagnostic distinction, not a reason to remove '
+                      'ink-gap candidates. Never count these summaries as recovered shifts.', '']
+    lines += ['**Validation requirement:** independent photographed, labelled rosters and '
+              'complete per-crop evidence are required before changing candidate scoring '
+              'or OFF protection.', '']
+    return '\n'.join(lines)
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--manifest', type=Path, required=True)
@@ -601,13 +696,15 @@ def main(argv=None):
                         help='Optional all-seven-day ranking and OFF negative-control audit')
     parser.add_argument('--score-ablation', type=Path,
                         help='Optional fixed-rule top-three ranking comparison; never accepts shifts')
+    parser.add_argument('--block-coverage', type=Path,
+                        help='Optional top-three versus full per-block and shadow OCR coverage audit')
     args = parser.parse_args(argv)
     try:
         results = evaluate(args.manifest)
         report = markdown(results)
         destinations = [p.resolve() for p in (args.candidate_audit, args.output,
                                               args.time_evidence, args.ranking_safety,
-                                              args.score_ablation) if p]
+                                              args.score_ablation, args.block_coverage) if p]
         if len(destinations) != len(set(destinations)):
             raise EvaluationError('All report output paths must differ')
         if args.candidate_audit:
@@ -618,6 +715,8 @@ def main(argv=None):
             args.ranking_safety.write_text(ranking_safety_report(results) + '\n', encoding='utf-8')
         if args.score_ablation:
             args.score_ablation.write_text(score_ablation_report(results) + '\n', encoding='utf-8')
+        if args.block_coverage:
+            args.block_coverage.write_text(block_coverage_report(results) + '\n', encoding='utf-8')
         if args.output:
             args.output.write_text(report + '\n', encoding='utf-8')
         else:
