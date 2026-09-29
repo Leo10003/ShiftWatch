@@ -413,6 +413,83 @@ def candidate_audit(result):
     return '\n'.join(lines)
 
 
+
+def ranking_safety_report(result):
+    """Read-only label-dependent ranking and negative-control audit, not a new decision rule."""
+    lines = ['# ShiftWatch labelled ranking-safety audit', '',
+             '**Research only:** this inspects exported top-three production candidates and the '
+             'reported acceptance floor. It does not rescore crops, replay altered thresholds, '
+             'or propose automatic shifts.', '',
+             'Ground-truth labels and prediction provenance are user-declared. '
+             'Candidate scores are not calibrated probabilities. '
+             'Top-three absence does not prove a candidate was never generated.', '']
+    for case in result:
+        lines += [f'## Case: {case["id"]}', '']
+        seen = set()
+        for scan in case['scans']:
+            fp = scan['fingerprint']
+            lines += [f'### Automatic export: {scan["path"]}', '']
+            if fp and fp in seen:
+                lines += ['**Warning:** repeated OCR fingerprint; do not count this as an '
+                          'independent photograph.', '']
+            if fp:
+                seen.add(fp)
+            lines += ['| Day | Label | Production | Top block / score | Top-three label rank | '
+                      'Floor gap | Top margin | Top raw separation | Diagnostic classification |',
+                      '|---|---|---|---|---|---:|---:|---:|---|']
+            for d in range(7):
+                row = scan['rows'][d]
+                label = scan['truth'][d]
+                status = row['decision']
+                accepted = status.startswith('accepted')
+                candidates = row.get('topCandidates')
+                candidates = candidates[:3] if isinstance(candidates, list) else []
+                valid = [c for c in candidates if isinstance(c, dict) and
+                         type(c.get('physicalBlockIndex')) is int and
+                         0 <= c['physicalBlockIndex'] <= 2]
+                top = valid[0] if valid else None
+                top_block = top['physicalBlockIndex'] if top else None
+                top_score = top.get('adjustedScore') if top else None
+                floor = row.get('acceptanceFloor')
+                next_score = valid[1].get('adjustedScore') if len(valid) > 1 else None
+                margin = (top_score - next_score if type(top_score) in (int, float)
+                          and type(next_score) in (int, float) else None)
+                gap = (top_score - floor if type(top_score) in (int, float)
+                       and type(floor) in (int, float) else None)
+                if label is None:
+                    label_text, label_rank = 'OFF', 'n/a'
+                    category = ('OFF FALSE SUGGESTION' if accepted else
+                                'OFF correctly rejected; negative control')
+                else:
+                    label_text = f'B{label+1}'
+                    correct = [i + 1 for i, c in enumerate(valid)
+                               if c['physicalBlockIndex'] == label]
+                    label_rank = str(correct[0]) if correct else 'not in exported top three'
+                    if accepted:
+                        category = ('accepted correct block' if top_block == label else
+                                    'WRONG BLOCK ACCEPTED')
+                    elif not valid:
+                        category = 'rejected; no exported top-three candidate'
+                    elif top_block == label:
+                        category = 'rejected; correct block leads'
+                    elif correct:
+                        category = 'rejected; competing block leads'
+                    else:
+                        category = 'rejected; labelled block absent from exported top three'
+                top_text = (f'B{top_block+1} / {fmt_score(top_score)}' if top else 'not exported')
+                lines.append(f'| {DAYS[d]} | {label_text} | {status} | {top_text} | '
+                             f'{label_rank} | {fmt_score(gap)} | {fmt_score(margin)} | '
+                             f'{fmt_score(top.get("rawSeparation") if top else None)} | '
+                             f'{category} |')
+            lines += ['', 'Floor gap is top adjusted score minus the exported acceptance floor; '
+                      'it is descriptive and does **not** capture all production gates. '
+                      'Top margin uses only the top two exported candidates, if available.', '']
+    lines += ['**Safety:** never lower thresholds or override OFF protection based on this '
+              'report alone. Obtain independently photographed and labelled rosters, '
+              'and evaluate false suggestions and wrong blocks before production changes.', '']
+    return '\n'.join(lines)
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--manifest', type=Path, required=True)
@@ -421,17 +498,22 @@ def main(argv=None):
                         help='Optional separate labelled missed-candidate audit in Markdown')
     parser.add_argument('--time-evidence', type=Path,
                         help='Optional preliminary structural-time evidence report; NOT time accuracy')
+    parser.add_argument('--ranking-safety', type=Path,
+                        help='Optional all-seven-day ranking and OFF negative-control audit')
     args = parser.parse_args(argv)
     try:
         results = evaluate(args.manifest)
         report = markdown(results)
-        destinations = [p.resolve() for p in (args.candidate_audit, args.output, args.time_evidence) if p]
+        destinations = [p.resolve() for p in (args.candidate_audit, args.output,
+                                              args.time_evidence, args.ranking_safety) if p]
         if len(destinations) != len(set(destinations)):
-            raise EvaluationError('Summary, candidate-audit and time-evidence output paths must differ')
+            raise EvaluationError('All report output paths must differ')
         if args.candidate_audit:
             args.candidate_audit.write_text(candidate_audit(results), encoding='utf-8')
         if args.time_evidence:
             args.time_evidence.write_text(time_evidence_report(results) + '\n', encoding='utf-8')
+        if args.ranking_safety:
+            args.ranking_safety.write_text(ranking_safety_report(results) + '\n', encoding='utf-8')
         if args.output:
             args.output.write_text(report + '\n', encoding='utf-8')
         else:
