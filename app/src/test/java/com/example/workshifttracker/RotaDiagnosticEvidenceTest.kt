@@ -22,6 +22,32 @@ class RotaDiagnosticEvidenceTest {
         assertEquals(.025f, trace(aboveUpper, .05f).adjustment, .00001f)
     }
 
+    @Test fun boundaryReviewTelemetryIsLabelBlindAndNeverPromotesCandidates() {
+        fun candidate(rank: Int, block: Int?, raw: Float, required: Float?, branch: String,
+                      origin: String = "ocr_token_band") =
+            RotaDiagnosticEvidence.RankedProfileCandidate(
+                rank, block, 5, .43f, .55f, .52f, rawSeparation = raw,
+                separationAdjustment = if (branch == "below_required_separation") -.12f else 0f,
+                candidateOrigin = origin, requiredSeparation = required,
+                separationBranch = branch)
+        val input = listOf(
+            candidate(1, 2, .031f, .041f, "below_required_separation"),
+            candidate(2, 0, .015f, .045f, "below_required_separation", "ink_gap_probe"),
+            candidate(3, 3, .020f, .05f, "below_required_separation"),
+            candidate(4, 1, -.024f, .05f, "below_required_separation"))
+        val snapshot = input.toList()
+        val triage = RotaDiagnosticEvidence.boundaryReviewTelemetry(input)
+        assertEquals(2, triage.positiveRawBelowBoundaryCount)
+        assertEquals(1, triage.outsideLabelledBlocksCount)
+        assertEquals(1, triage.closestPositiveRawBelowBoundary?.rank)
+        assertEquals(2, triage.closestPositiveRawBelowBoundary?.physicalBlockIndex)
+        assertEquals(.010f, triage.closestPositiveRawBelowBoundary!!.shortfall, .000001f)
+        assertEquals(snapshot, input) // telemetry cannot mutate production rank or status
+        val offLike = RotaDiagnosticEvidence.boundaryReviewTelemetry(input.takeLast(1))
+        assertEquals(0, offLike.positiveRawBelowBoundaryCount)
+        assertEquals(null, offLike.closestPositiveRawBelowBoundary)
+    }
+
     @Test fun scoredCandidateRecordsMeasuredBoundaryAndBranchWithoutChangingRanking() {
         val required = RotaIdentityPolicy.boundary(3, 5, .518f).requiredSeparation
         val trace = RotaDiagnosticEvidence.separationTrace(.031f, required)

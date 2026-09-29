@@ -1429,6 +1429,23 @@ private fun ImportReviewSheet(
                                         // Every already-scored production crop, in production rank order.
                                         // No OCR text, name, pixel array, or exact coordinates are exported.
                                         put("scoringBoundaryProvenanceVersion", 1)
+                                        // Descriptive review telemetry only: no changes to profile matches or acceptance.
+                                        val boundaryTriage = RotaDiagnosticEvidence.boundaryReviewTelemetry(
+                                            decision.completeProductionCandidates)
+                                        put("boundaryReviewTelemetry", JSONObject().apply {
+                                            put("positiveRawBelowBoundaryCount", boundaryTriage.positiveRawBelowBoundaryCount)
+                                            put("outsideLabelledBlocksCount", boundaryTriage.outsideLabelledBlocksCount)
+                                            put("closestPositiveRawBelowBoundary", boundaryTriage.closestPositiveRawBelowBoundary?.let { near ->
+                                                JSONObject().apply {
+                                                    put("rank", near.rank)
+                                                    put("physicalBlockIndex", near.physicalBlockIndex)
+                                                    put("candidateOrigin", near.candidateOrigin)
+                                                    put("rawSeparation", near.rawSeparation.toDouble())
+                                                    put("requiredSeparation", near.requiredSeparation.toDouble())
+                                                    put("shortfall", near.shortfall.toDouble())
+                                                }
+                                            } ?: JSONObject.NULL)
+                                        })
                                         put("completeProductionCandidates", JSONArray().apply {
                                             decision.completeProductionCandidates.forEach { candidate ->
                                                 put(JSONObject().apply {

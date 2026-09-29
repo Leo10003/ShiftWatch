@@ -12,8 +12,8 @@ class CompleteCandidateExportSourceTests(unittest.TestCase):
         gradle = (ROOT / 'app/build.gradle.kts').read_text(encoding='utf-8')
         self.assertIn('put("schemaVersion", 16)', planner)
         self.assertEqual(1, planner.count('put("completeProductionCandidates", JSONArray().apply'))
-        self.assertIn('versionCode = 230', gradle)
-        self.assertIn('versionName = "20.8.27"', gradle)
+        self.assertIn('versionCode = 231', gradle)
+        self.assertIn('versionName = "20.8.32"', gradle)
         self.assertIn('InstalledAppVersionLabel()', planner)
 
     def test_full_candidates_derive_from_production_scored_ranking_not_shadow(self):

@@ -111,6 +111,40 @@ internal object RotaDiagnosticEvidence {
         }
     }
 
+    /** Label-blind, review-only boundary telemetry. This never creates or accepts a match.
+     * Record the ACTUAL crop with the smallest positive shortfall, not cross-crop maxima.
+     * Extra physical regions remain counted but are never mapped to B1-B3.
+     */
+    data class BoundaryNearMiss(
+        val rank: Int,
+        val physicalBlockIndex: Int,
+        val candidateOrigin: String,
+        val rawSeparation: Float,
+        val requiredSeparation: Float,
+        val shortfall: Float
+    )
+    data class BoundaryReviewTelemetry(
+        val positiveRawBelowBoundaryCount: Int,
+        val outsideLabelledBlocksCount: Int,
+        val closestPositiveRawBelowBoundary: BoundaryNearMiss?
+    )
+
+    fun boundaryReviewTelemetry(candidates: List<RankedProfileCandidate>): BoundaryReviewTelemetry {
+        val outside = candidates.count { it.physicalBlockIndex !in 0..2 }
+        val missed = candidates.filter { item ->
+            item.physicalBlockIndex in 0..2 && item.requiredSeparation != null &&
+                item.rawSeparation > 0f && item.separationBranch == "below_required_separation"
+        }
+        val nearest = missed.minWithOrNull(compareBy<RankedProfileCandidate> {
+            it.requiredSeparation!! - it.rawSeparation
+        }.thenBy { it.rank })?.let { item ->
+            BoundaryNearMiss(item.rank, item.physicalBlockIndex!!, item.candidateOrigin,
+                item.rawSeparation, item.requiredSeparation!!,
+                item.requiredSeparation - item.rawSeparation)
+        }
+        return BoundaryReviewTelemetry(missed.size, outside, nearest)
+    }
+
     /** One row per candidate source, including losing candidates outside the exported top three.
      * These source summaries contain no OCR text or image coordinates.
      */
