@@ -252,11 +252,7 @@ private fun WorkShiftApp(store: ShiftStore) {
                                     .width(166.dp)
                                     .height(28.dp)
                             )
-                            Text(
-                                "Your work time, clearly organized",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                            InstalledAppVersionLabel()
                         }
                     }
                 },

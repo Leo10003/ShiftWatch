@@ -305,7 +305,11 @@ private fun PlannerScreen(store: ShiftStore, onBack: () -> Unit) {
                         )
                         Spacer(Modifier.width(9.dp))
                         Column {
-                            Text("Planner", fontWeight = FontWeight.Bold)
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text("Planner", fontWeight = FontWeight.Bold)
+                                Spacer(Modifier.width(8.dp))
+                                InstalledAppVersionLabel()
+                            }
                             Text("Upcoming work schedule", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
@@ -2339,7 +2343,11 @@ private fun AssistedScheduleImage(
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
-                            Text(if (automaticTable) "Review detected table" else "Select shifts", style = MaterialTheme.typography.titleLarge)
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(if (automaticTable) "Review detected table" else "Select shifts", style = MaterialTheme.typography.titleLarge)
+                                Spacer(Modifier.width(8.dp))
+                                InstalledAppVersionLabel()
+                            }
                             Text(
                                 if (automaticTable) "Detected table rows are suggestions. Compare them with the original and explicitly select what you want to import."
                                 else "Automatic scan runs first. Review detected shifts; tap examples only for names the engine could not resolve.",
