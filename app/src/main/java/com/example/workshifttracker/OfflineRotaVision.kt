@@ -389,7 +389,8 @@ internal object OfflineRotaVision {
         data class Ranked(val candidate: Candidate, val score: Float, val positive: Float,
                           val negative: Float, val separation: Float,
                           val rawSeparation: Float, val confuserPenalty: Float,
-                          val separationAdjustment: Float)
+                          val separationAdjustment: Float,
+                          val requiredSeparation: Float?, val separationBranch: String)
         data class Deferred(
             val column: Int,
             val x: Float,
@@ -423,6 +424,8 @@ internal object OfflineRotaVision {
                 var confuserPenalty = 0f
                 var separationAdjustment = 0f
                 var rawSeparation = 0f
+                var requiredSeparation: Float? = null
+                var separationBranch = "no_confuser_profile"
                 if (model.negatives.isNotEmpty()) {
                     val negativeScores = model.negatives.map { similarity(it, sig) }.sortedDescending()
                     negative = negativeScores.take(3).average().toFloat()
@@ -430,15 +433,19 @@ internal object OfflineRotaVision {
                     rawSeparation = separation
                     val boundary = RotaIdentityPolicy.boundary(profiles.size, model.negatives.size, negative)
                     confuserPenalty = boundary.confuserPenalty
+                    requiredSeparation = boundary.requiredSeparation
                     score -= confuserPenalty
                     // Same branch and constants as before, now independently testable.
                     // Apply it after the separate confuser penalty, using PRE-penalty separation.
-                    separationAdjustment = RotaDiagnosticEvidence.separationTrace(
-                        separation, boundary.requiredSeparation).adjustment
+                    val trace = RotaDiagnosticEvidence.separationTrace(
+                        separation, boundary.requiredSeparation)
+                    separationAdjustment = trace.adjustment
+                    separationBranch = trace.branch
                     score += separationAdjustment
                 }
                 return Ranked(candidate, score.coerceIn(0f, 1f), positive, negative, score - negative,
-                    rawSeparation, confuserPenalty, separationAdjustment)
+                    rawSeparation, confuserPenalty, separationAdjustment,
+                    requiredSeparation, separationBranch)
             }
             val shadows = shadowOcrCache[bitmap]?.get(candidateKey(assist, column, left, right)).orEmpty()
                 .mapNotNull(::scoreCandidate)
@@ -458,7 +465,9 @@ internal object OfflineRotaVision {
                     adjustedScore = item.score, positiveScore = item.positive, confuserScore = item.negative,
                     rawSeparation = item.rawSeparation, confuserPenalty = item.confuserPenalty,
                     separationAdjustment = item.separationAdjustment,
-                    candidateOrigin = if (item.candidate.ocrText == null) "ink_gap_probe" else "ocr_token_band"
+                    candidateOrigin = if (item.candidate.ocrText == null) "ink_gap_probe" else "ocr_token_band",
+                    requiredSeparation = item.requiredSeparation,
+                    separationBranch = item.separationBranch
                 )
             }
             val shadowByBlock = RotaDiagnosticEvidence.blockScoreEvidence(shadows.map(::evidenceRow))
@@ -595,7 +604,9 @@ internal object OfflineRotaVision {
                         rawSeparation = item.rawSeparation,
                         confuserPenalty = item.confuserPenalty,
                         separationAdjustment = item.separationAdjustment,
-                        candidateOrigin = if (item.candidate.ocrText == null) "ink_gap_probe" else "ocr_token_band"
+                        candidateOrigin = if (item.candidate.ocrText == null) "ink_gap_probe" else "ocr_token_band",
+                        requiredSeparation = item.requiredSeparation,
+                        separationBranch = item.separationBranch
                     )
                 }, completeProductionCandidates = completeProductionCandidates,
                 runnerOverlapFraction = runnerOverlap, runnerIsSamePhysicalBlock = runnerSameBlock,

@@ -22,6 +22,30 @@ class RotaDiagnosticEvidenceTest {
         assertEquals(.025f, trace(aboveUpper, .05f).adjustment, .00001f)
     }
 
+    @Test fun scoredCandidateRecordsMeasuredBoundaryAndBranchWithoutChangingRanking() {
+        val required = RotaIdentityPolicy.boundary(3, 5, .518f).requiredSeparation
+        val trace = RotaDiagnosticEvidence.separationTrace(.031f, required)
+        val recorded = RotaDiagnosticEvidence.RankedProfileCandidate(
+            rank = 1, physicalBlockIndex = 2, verticalDecile = 5,
+            adjustedScore = .429f, positiveScore = .549f, confuserScore = .518f,
+            rawSeparation = .031f, separationAdjustment = trace.adjustment,
+            candidateOrigin = "ocr_token_band",
+            requiredSeparation = required, separationBranch = trace.branch)
+        val complete = RotaDiagnosticEvidence.completeCandidateEvidence(listOf(recorded))
+        assertEquals(required, complete.single().requiredSeparation)
+        assertEquals(trace.branch, complete.single().separationBranch)
+        val noNegatives = recorded.copy(rawSeparation = 0f, separationAdjustment = 0f,
+            requiredSeparation = null, separationBranch = "no_confuser_profile")
+        assertEquals(null, noNegatives.requiredSeparation)
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun contradictoryBoundaryTraceIsRejected() {
+        RotaDiagnosticEvidence.RankedProfileCandidate(
+            1, 2, 4, .4f, .5f, .4f, rawSeparation=.1f,
+            requiredSeparation=.02f, separationBranch="below_required_separation")
+    }
+
     @Test fun adjustmentDependsOnLearnedBoundaryNotWeekdayOrPositiveRawAlone() {
         // Illustrative raw values from diagnostic reports; boundary values are
         // synthetic, because the private export doesn't expose requiredSeparation.

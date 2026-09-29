@@ -88,7 +88,10 @@ internal object RotaDiagnosticEvidence {
         val rawSeparation: Float = 0f,
         val confuserPenalty: Float = 0f,
         val separationAdjustment: Float = 0f,
-        val candidateOrigin: String = "unknown"
+        val candidateOrigin: String = "unknown",
+        // Null when there is no learned confuser profile or for legacy diagnostic rows.
+        val requiredSeparation: Float? = null,
+        val separationBranch: String? = null
     ) {
         init {
             require(rank >= 1 && verticalDecile in 0..9)
@@ -96,6 +99,15 @@ internal object RotaDiagnosticEvidence {
             require(adjustedScore in 0f..1f && positiveScore in 0f..1f && confuserScore in 0f..1f)
             require(rawSeparation in -1f..1f && confuserPenalty in 0f..1f)
             require(separationAdjustment in -1f..1f)
+            require(requiredSeparation == null || (requiredSeparation.isFinite() && requiredSeparation in 0f..1f))
+            require(separationBranch == null || separationBranch in setOf(
+                "below_required_separation", "within_separation_band",
+                "strong_separation_bonus", "no_confuser_profile"))
+            if (separationBranch == "no_confuser_profile") require(requiredSeparation == null)
+            if (separationBranch != null && separationBranch != "no_confuser_profile") {
+                require(requiredSeparation != null)
+                require(separationTrace(rawSeparation, requiredSeparation).branch == separationBranch)
+            }
         }
     }
 

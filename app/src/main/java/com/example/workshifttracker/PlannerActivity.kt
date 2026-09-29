@@ -1288,6 +1288,8 @@ private fun ImportReviewSheet(
                                                     put("confuserPenalty", candidate.confuserPenalty.toDouble())
                                                     put("separationAdjustment", candidate.separationAdjustment.toDouble())
                                                     put("candidateOrigin", candidate.candidateOrigin)
+                                                    put("requiredSeparation", candidate.requiredSeparation?.toDouble() ?: JSONObject.NULL)
+                                                    put("separationBranch", candidate.separationBranch ?: JSONObject.NULL)
                                                 })
                                             }
                                         })
@@ -1426,6 +1428,7 @@ private fun ImportReviewSheet(
                                         })
                                         // Every already-scored production crop, in production rank order.
                                         // No OCR text, name, pixel array, or exact coordinates are exported.
+                                        put("scoringBoundaryProvenanceVersion", 1)
                                         put("completeProductionCandidates", JSONArray().apply {
                                             decision.completeProductionCandidates.forEach { candidate ->
                                                 put(JSONObject().apply {
@@ -1439,6 +1442,8 @@ private fun ImportReviewSheet(
                                                     put("confuserPenalty", candidate.confuserPenalty.toDouble())
                                                     put("separationAdjustment", candidate.separationAdjustment.toDouble())
                                                     put("candidateOrigin", candidate.candidateOrigin)
+                                                    put("requiredSeparation", candidate.requiredSeparation?.toDouble() ?: JSONObject.NULL)
+                                                    put("separationBranch", candidate.separationBranch ?: JSONObject.NULL)
                                                 })
                                             }
                                         })
@@ -1455,6 +1460,8 @@ private fun ImportReviewSheet(
                                                     put("confuserPenalty", candidate.confuserPenalty.toDouble())
                                                     put("separationAdjustment", candidate.separationAdjustment.toDouble())
                                                     put("candidateOrigin", candidate.candidateOrigin)
+                                                    put("requiredSeparation", candidate.requiredSeparation?.toDouble() ?: JSONObject.NULL)
+                                                    put("separationBranch", candidate.separationBranch ?: JSONObject.NULL)
                                                 })
                                             }
                                         })
