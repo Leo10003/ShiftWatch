@@ -5,6 +5,7 @@ This does not perform OCR and never uses experimental replay as a production sug
 """
 import argparse
 import json
+import re
 from pathlib import Path
 import sys
 
@@ -54,6 +55,50 @@ def parse_truth(doc, source):
         expected[d] = None
     require(len(expected) == 7, f'{source}: incomplete truth: explicitly label all seven weekdays')
     return expected
+
+
+def parse_truth_times(doc, source):
+    """Optional user-confirmed start times; these are NOT observed app predictions."""
+    times = {}
+    for entry in doc.get('shifts', []):
+        if 'startTime' not in entry:
+            continue
+        value = entry['startTime']
+        require(isinstance(value, str) and re.fullmatch(r'([01]\d|2[0-3]):[0-5]\d', value),
+                f'{source}: startTime must use 24-hour HH:MM')
+        times[entry['weekday']] = value
+    return times
+
+
+def structural_time_rows(doc, source):
+    """A global block-level hypothesis; NOT each day's final assigned start time."""
+    raw = doc.get('structuralTimeEvidence')
+    if raw is None:
+        return None
+    require(isinstance(raw, list), f'{source}: structuralTimeEvidence must be an array')
+    results = {}
+    for band in raw:
+        require(isinstance(band, dict), f'{source}: invalid structural time evidence')
+        b = band.get('physicalBlockIndex')
+        require(type(b) is int and 0 <= b <= 2 and b not in results,
+                f'{source}: structural time block must be unique, zero-based, 0 to 2')
+        proposed = band.get('proposedTime')
+        require(proposed is None or isinstance(proposed, str),
+                f'{source}: invalid structural proposed time for block {b}')
+        alternatives = band.get('alternatives', [])
+        require(isinstance(alternatives, list), f'{source}: invalid alternatives in block {b}')
+        times = []
+        for alt in alternatives:
+            require(isinstance(alt, dict) and isinstance(alt.get('time'), str),
+                    f'{source}: invalid structural alternative in block {b}')
+            times.append(alt['time'])
+        results[b] = {'proposal': proposed, 'alternatives': times,
+                      'requiresReview': band.get('requiresReview'),
+                      'confidence': band.get('confidence'),
+                      'supportColumns': band.get('distinctSupportColumns'),
+                      'strongColumns': band.get('strongSupportColumns'),
+                      'independentAtlasColumns': band.get('independentAtlasColumns')}
+    return results
 
 
 def scan_rows(doc, source):
@@ -137,7 +182,9 @@ def evaluate(manifest_path):
         require(isinstance(case.get('groundTruth'), str) and isinstance(scans, list)
                 and scans, f'{cid}: groundTruth and nonempty predictions/scans required')
         truth_path = manifest_path.parent / case['groundTruth']
-        truth = parse_truth(read_json(truth_path), truth_path)
+        truth_doc = read_json(truth_path)
+        truth = parse_truth(truth_doc, truth_path)
+        truth_times = parse_truth_times(truth_doc, truth_path)
         entry = {'id': cid, 'scans': [], 'warnings': []}
         if not is_v2:
             entry['warnings'].append(
@@ -179,7 +226,9 @@ def evaluate(manifest_path):
             entry['scans'].append({'path': scan, 'origin': 'automatic_export' if is_v2 else 'unverified_legacy',
                                    'production': prod, 'replay': replay,
                                    'productionDays': p_days, 'replayDays': r_days,
-                                   'rows': rows, 'truth': truth, 'fingerprint': fingerprint})
+                                   'rows': rows, 'truth': truth, 'truthTimes': truth_times,
+                                   'timeBands': structural_time_rows(doc, p),
+                                   'fingerprint': fingerprint})
         result.append(entry)
     return result
 
@@ -206,6 +255,55 @@ def markdown(result):
                 case['scans'][0]['productionDays'], case['scans'][0]['replayDays']):
             lines.append(f'| {day} | {p_result} | {r_result} |')
         lines += ['', 'Scans of the same photo assess repeatability, not generalization.', '']
+    return '\n'.join(lines)
+
+
+def time_evidence_report(result):
+    """Compare labelled times with preliminary structural hypotheses ONLY."""
+    lines = ['# ShiftWatch labelled structural time evidence', '',
+             '**Evidence audit, NOT start-time recognition accuracy.** Structural block proposals '
+             'are preliminary shared hypotheses, not final per-day shift start times. '
+             'A match is not proof the app assigned that hour to the correct day.', '',
+             'Ground-truth start times are independently user-declared; automatic-export '
+             'provenance is also user-declared. No manual corrections are predictions.', '']
+    for case in result:
+        lines += [f'## Case: {case["id"]}', '']
+        for scan in case['scans']:
+            times, truth, bands = scan['truthTimes'], scan['truth'], scan['timeBands']
+            lines += [f'### Automatic export: {scan["path"]}', '',
+                      'These global block bands must not be counted once per weekday. '
+                      'No final day-level start-time prediction is available in this export.', '']
+            if not times:
+                lines += ['No confirmed startTime labels. No structural time comparison possible.', '']
+                continue
+            by_block = {}
+            for d, start in times.items():
+                by_block.setdefault(truth[d], set()).add(start)
+            lines += ['| Block | Confirmed time(s) | Structural proposal | Alternatives | Review | '
+                      'Confidence | Distinct / strong / atlas columns | Evidence assessment |',
+                      '|---|---|---|---|---|---|---|---|']
+            for b, confirmed in sorted(by_block.items()):
+                evidence = bands.get(b) if bands is not None else None
+                labels = ', '.join(sorted(confirmed))
+                if len(confirmed) > 1:
+                    assessment = 'Multiple labelled times for this block; no single block-level comparison'
+                elif evidence is None:
+                    assessment = 'No exported structural evidence for this block'
+                elif evidence['proposal'] in confirmed:
+                    assessment = 'Preliminary structural proposal matches label; final day assignments unknown'
+                elif confirmed.intersection(evidence['alternatives']):
+                    assessment = 'Preliminary proposal differs; confirmed time appears only as an alternative'
+                else:
+                    assessment = 'Preliminary proposal differs; confirmed time absent from alternatives'
+                proposal = evidence['proposal'] if evidence else 'not exported'
+                alts = ', '.join(evidence['alternatives']) if evidence else 'not exported'
+                review = evidence['requiresReview'] if evidence else 'not exported'
+                confidence = fmt_score(evidence['confidence']) if evidence else 'not exported'
+                supports = (f'{evidence["supportColumns"]} / {evidence["strongColumns"]} / '
+                            f'{evidence["independentAtlasColumns"]}' if evidence else 'not exported')
+                lines.append(f'| B{b+1} | {labels} | {proposal or "none"} | {alts} | '
+                             f'{review} | {confidence} | {supports} | {assessment} |')
+            lines += ['', '**No final time-accuracy percentage can be calculated from these fields.**', '']
     return '\n'.join(lines)
 
 
@@ -321,14 +419,19 @@ def main(argv=None):
     parser.add_argument('--output', type=Path, help='Optional Markdown output filename')
     parser.add_argument('--candidate-audit', type=Path,
                         help='Optional separate labelled missed-candidate audit in Markdown')
+    parser.add_argument('--time-evidence', type=Path,
+                        help='Optional preliminary structural-time evidence report; NOT time accuracy')
     args = parser.parse_args(argv)
     try:
         results = evaluate(args.manifest)
         report = markdown(results)
-        if args.candidate_audit and args.output and args.candidate_audit.resolve() == args.output.resolve():
-            raise EvaluationError('Summary and candidate-audit output paths must be different')
+        destinations = [p.resolve() for p in (args.candidate_audit, args.output, args.time_evidence) if p]
+        if len(destinations) != len(set(destinations)):
+            raise EvaluationError('Summary, candidate-audit and time-evidence output paths must differ')
         if args.candidate_audit:
             args.candidate_audit.write_text(candidate_audit(results), encoding='utf-8')
+        if args.time_evidence:
+            args.time_evidence.write_text(time_evidence_report(results) + '\n', encoding='utf-8')
         if args.output:
             args.output.write_text(report + '\n', encoding='utf-8')
         else:
