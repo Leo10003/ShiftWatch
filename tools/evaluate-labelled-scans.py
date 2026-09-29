@@ -122,9 +122,9 @@ def tally(rows, truth, experimental=False):
 def evaluate(manifest_path):
     manifest_path = Path(manifest_path).resolve()
     manifest = read_json(manifest_path)
-    require(isinstance(manifest, dict) and manifest.get('schemaVersion') == 1
+    require(isinstance(manifest, dict) and manifest.get('schemaVersion') in (1, 2)
             and isinstance(manifest.get('cases'), list) and manifest['cases'],
-            'Manifest must have schemaVersion 1 and a nonempty cases array')
+            'Manifest requires schemaVersion 1 or 2 and a nonempty cases array')
     result, seen_id, sessions, runs, fingerprints = [], set(), set(), set(), {}
     for case in manifest['cases']:
         require(isinstance(case, dict) and isinstance(case.get('id'), str) and case['id'].strip(),
@@ -132,14 +132,30 @@ def evaluate(manifest_path):
         cid = case['id']
         require(cid not in seen_id, f'Duplicate case id {cid}')
         seen_id.add(cid)
-        require(isinstance(case.get('groundTruth'), str) and isinstance(case.get('scans'), list)
-                and case['scans'], f'{cid}: groundTruth and nonempty scans required')
+        is_v2 = manifest['schemaVersion'] == 2
+        scans = case.get('predictions') if is_v2 else case.get('scans')
+        require(isinstance(case.get('groundTruth'), str) and isinstance(scans, list)
+                and scans, f'{cid}: groundTruth and nonempty predictions/scans required')
         truth_path = manifest_path.parent / case['groundTruth']
         truth = parse_truth(read_json(truth_path), truth_path)
         entry = {'id': cid, 'scans': [], 'warnings': []}
-        for scan in case['scans']:
-            require(isinstance(scan, str) and bool(scan), f'{cid}: scan path must be a string')
+        if not is_v2:
+            entry['warnings'].append(
+                'Legacy manifest has no prediction provenance; use schemaVersion 2. '
+                'Never evaluate manually corrected scan files as automatic predictions.')
+        for item in scans:
+            if is_v2:
+                require(isinstance(item, dict), f'{cid}: schemaVersion 2 predictions must be objects')
+                require(item.get('origin') == 'automatic_export',
+                        f'{cid}: prediction origin must be automatic_export; '
+                        'manually corrected files belong in groundTruth only')
+                scan = item.get('path')
+            else:
+                scan = item
+            require(isinstance(scan, str) and bool(scan), f'{cid}: prediction path must be a string')
             p = manifest_path.parent / scan
+            require(p.resolve() != truth_path.resolve(),
+                    f'{cid}: prediction and groundTruth must be different files')
             doc = read_json(p)
             session, run, rows = scan_rows(doc, p)
             require(session not in sessions and run not in runs,
@@ -160,7 +176,8 @@ def evaluate(manifest_path):
                     entry['warnings'].append('OCR geometry fingerprint is also present in case '
                                              f'{fingerprints[fingerprint]}; distinct photo is NOT verified')
                 fingerprints[fingerprint] = cid
-            entry['scans'].append({'path': scan, 'production': prod, 'replay': replay,
+            entry['scans'].append({'path': scan, 'origin': 'automatic_export' if is_v2 else 'unverified_legacy',
+                                   'production': prod, 'replay': replay,
                                    'productionDays': p_days, 'replayDays': r_days,
                                    'rows': rows, 'truth': truth, 'fingerprint': fingerprint})
         result.append(entry)
@@ -172,9 +189,11 @@ def markdown(result):
              '**Diagnostic only:** working-day block identity and OFF suggestions; '
              'start times and week dates are not evaluated. Replay is hypothetical, never a production suggestion.', '']
     photo_count = len(result)
-    lines += [f'Labelled cases: {photo_count}. Different case IDs alone do not prove different photographs.', '']
+    lines += [f'Labelled cases: {photo_count}. Different case IDs alone do not prove different photographs.',
+              '**Provenance:** automatic_export is user-declared, not verified by sanitized JSON. '
+              'Manually corrected scan files are ground truth, never predictions.', '']
     for case in result:
-        lines += [f'## Case: {case["id"]}', '', '| Scan | Production hits | Production OFF false | Replay hits | Replay OFF false |',
+        lines += [f'## Case: {case["id"]}', '', '| Prediction file | Production hits | Production OFF false | Replay hits | Replay OFF false |',
                   '|---|---:|---:|---:|---:|']
         for scan in case['scans']:
             p, r = scan['production'], scan['replay']
