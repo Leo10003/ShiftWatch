@@ -490,6 +490,105 @@ def ranking_safety_report(result):
     return '\n'.join(lines)
 
 
+
+
+def _finite_number(value):
+    """Only exported real, finite numeric fields can support an ablation comparison."""
+    import math
+    return type(value) in (int, float) and math.isfinite(value)
+
+
+def _ablation_order(row, field, ocr_only=False):
+    """Rank *exported* top-three crops without using ground-truth labels.
+
+    The production candidate list is truncated: these are not full-search replays.
+    Comparing crops within the same physical block would misstate block ranking,
+    so show the strongest observed crop per block for each fixed ranking rule.
+    """
+    exported = row.get('topCandidates')
+    if not isinstance(exported, list):
+        return [], 0
+    observed = exported[:3]
+    best = {}
+    for candidate in observed:
+        if not isinstance(candidate, dict):
+            continue
+        block = candidate.get('physicalBlockIndex')
+        score = candidate.get(field)
+        if (type(block) is not int or block not in (0, 1, 2) or
+                not _finite_number(score) or
+                (ocr_only and candidate.get('candidateOrigin') != 'ocr_token_band')):
+            continue
+        # The sorting fields are predeclared; the expected truth label is never a feature.
+        if block not in best or score > best[block]:
+            best[block] = score
+    # Stable, transparent numerical tie-breaking without claiming a resolved decision.
+    ordered = sorted(best.items(), key=lambda item: (-item[1], item[0]))
+    return ordered, len(observed)
+
+
+def _ablation_cell(row, truth, field, ocr_only=False):
+    ordered, observed_count = _ablation_order(row, field, ocr_only)
+    if not ordered:
+        return 'not observable'
+    top_score = ordered[0][1]
+    ties = sum(1 for _, score in ordered if score == top_score)
+    leader = 'tie ' + '/'.join(f'B{b+1}' for b, score in ordered if score == top_score) if ties > 1 else f'B{ordered[0][0]+1}'
+    # A missing labelled block is missing from *this export*, not the actual candidate pool.
+    if truth is None:
+        label_status = 'OFF control; no acceptance simulated'
+    else:
+        ranks = [i + 1 for i, (block, _) in enumerate(ordered) if block == truth]
+        label_status = ('label rank ' + str(ranks[0]) if ranks else
+                        'label absent in compared export subset')
+    return f'{leader} / {top_score:.3f}; {label_status}'
+
+
+def score_ablation_report(result):
+    """Fixed, descriptive ranking ablations only; NO gates or thresholds are replayed."""
+    variants = [('Adjusted', 'adjustedScore', False),
+                ('Positive only', 'positiveScore', False),
+                ('Raw separation', 'rawSeparation', False),
+                ('OCR-origin adjusted only', 'adjustedScore', True)]
+    lines = ['# ShiftWatch fixed-score ranking ablations', '',
+             '**Research only, NOT production replay:** four predeclared ways to order only '
+             'the exported top-three production crops. Labels are used to annotate results, '
+             'never to choose or fit the ranking rules. No crop is rescored, no acceptance '
+             'or OFF gate is simulated, and these results must not be reported as recovered shifts.', '',
+             'The exported top three may include several crops in one block and omit better '
+             'unexported candidates. This audit collapses candidates by physical block using '
+             'the highest observed value for each variant. An absent block is **not** '
+             'evidence that it was never generated. Scores are not calibrated probabilities.', '']
+    for case in result:
+        lines += [f'## Case: {case["id"]}', '']
+        seen = set()
+        for scan in case['scans']:
+            lines += [f'### Automatic export: {scan["path"]}', '']
+            fp = scan['fingerprint']
+            if fp and fp in seen:
+                lines += ['**Warning:** repeated OCR fingerprint; NOT an independent photograph.', '']
+            if fp:
+                seen.add(fp)
+            lines += ['| Weekday | Confirmed | Production | ' + ' | '.join(v[0] for v in variants) + ' |',
+                      '|---|---|---|' + '|'.join(['---'] * len(variants)) + '|']
+            for d in range(7):
+                row = scan['rows'][d]
+                truth = scan['truth'][d]
+                label = 'OFF' if truth is None else f'B{truth+1}'
+                cells = [_ablation_cell(row, truth, field, ocr)
+                         for _, field, ocr in variants]
+                lines += [f'| {DAYS[d]} | {label} | {row["decision"]} | ' +
+                          ' | '.join(cells) + ' |']
+            lines += ['', 'Each cell identifies a **ranking observation, not an accepted shift**. '
+                      'OCR-only filtering excludes ink-gap crops *only within the exported top '
+                      'three*, and must not be read as a safe production policy.', '']
+    lines += ['**Safety check:** explicitly inspect OFF days and any wrong-block leaders '
+              'alongside missed days. Do not select a rule or change thresholds using this '
+              'single image or its repeated OCR fingerprint. Collect independently photographed '
+              'and labelled rosters before testing a production change.', '']
+    return '\n'.join(lines)
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--manifest', type=Path, required=True)
@@ -500,12 +599,15 @@ def main(argv=None):
                         help='Optional preliminary structural-time evidence report; NOT time accuracy')
     parser.add_argument('--ranking-safety', type=Path,
                         help='Optional all-seven-day ranking and OFF negative-control audit')
+    parser.add_argument('--score-ablation', type=Path,
+                        help='Optional fixed-rule top-three ranking comparison; never accepts shifts')
     args = parser.parse_args(argv)
     try:
         results = evaluate(args.manifest)
         report = markdown(results)
         destinations = [p.resolve() for p in (args.candidate_audit, args.output,
-                                              args.time_evidence, args.ranking_safety) if p]
+                                              args.time_evidence, args.ranking_safety,
+                                              args.score_ablation) if p]
         if len(destinations) != len(set(destinations)):
             raise EvaluationError('All report output paths must differ')
         if args.candidate_audit:
@@ -514,6 +616,8 @@ def main(argv=None):
             args.time_evidence.write_text(time_evidence_report(results) + '\n', encoding='utf-8')
         if args.ranking_safety:
             args.ranking_safety.write_text(ranking_safety_report(results) + '\n', encoding='utf-8')
+        if args.score_ablation:
+            args.score_ablation.write_text(score_ablation_report(results) + '\n', encoding='utf-8')
         if args.output:
             args.output.write_text(report + '\n', encoding='utf-8')
         else:
