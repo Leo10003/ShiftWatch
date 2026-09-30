@@ -9,8 +9,8 @@ SOURCE = ROOT / 'app/src/main/java/com/example/workshifttracker'
 class VisibleVersionLabelTests(unittest.TestCase):
     def test_release_metadata(self):
         text = (ROOT / 'app/build.gradle.kts').read_text(encoding='utf-8')
-        self.assertRegex(text, r'versionCode\s*=\s*231\b')
-        self.assertRegex(text, r'versionName\s*=\s*"20\.8\.32"')
+        self.assertRegex(text, r'versionCode\s*=\s*235\b')
+        self.assertRegex(text, r'versionName\s*=\s*"20\.8\.36"')
 
     def test_label_reads_installed_package(self):
         text = (SOURCE / 'InstalledAppVersionLabel.kt').read_text(encoding='utf-8')

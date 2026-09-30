@@ -35,6 +35,30 @@ class RotaViewerStatusTest {
         assertEquals("Name recognition could not finish • select shifts manually or retry", result.message)
     }
 
+    @Test fun twoWeakOcrGuessesDoNotSuppressSavedProfile() {
+        // On the second independent rota, two OCR review markers were below 0.90,
+        // and the saved-profile search was incorrectly skipped.
+        assertEquals(true, RotaViewerStatus.shouldRunSavedProfile(listOf(
+            false to 0.84f, false to 0.89f
+        )))
+    }
+
+    @Test fun twoStrongOrExactHitsKeepTextFirstBootstrap() {
+        assertEquals(false, RotaViewerStatus.shouldRunSavedProfile(listOf(
+            false to 0.90f, true to 0.79f
+        )))
+        assertEquals(false, RotaViewerStatus.shouldRunSavedProfile(listOf(
+            true to 0.10f, true to 0.20f
+        )))
+    }
+
+    @Test fun mixedOrMissingHitsAllowProfileFallback() {
+        assertEquals(true, RotaViewerStatus.shouldRunSavedProfile(emptyList()))
+        assertEquals(true, RotaViewerStatus.shouldRunSavedProfile(listOf(
+            true to 0.99f, false to 0.89f, false to 0.84f
+        )))
+    }
+
     @Test fun restoredSuggestionsHaveCompletedStatus() {
         assertEquals("Recognition complete • 1 suggestion awaits confirmation",
             RotaViewerStatus.completedSuggestions(1))

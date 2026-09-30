@@ -97,7 +97,8 @@ internal object OfflineRotaVision {
         val seedY: Float,
         val matches: List<Match>,
         val scannedLines: Int,
-        val columnDecisions: List<RotaDiagnosticEvidence.ProfileDecision> = emptyList()
+        val columnDecisions: List<RotaDiagnosticEvidence.ProfileDecision> = emptyList(),
+        val reviewHints: List<Match> = emptyList()
     )
 
     /** v13 local identity-model health. Counts are prototype clusters, not raw observations. */
@@ -403,6 +404,7 @@ internal object OfflineRotaVision {
         )
         val deferred = mutableListOf<Deferred>()
         val decisions = linkedMapOf<Int, RotaDiagnosticEvidence.ProfileDecision>()
+        val nearBoundaryCandidates = mutableListOf<RotaNearBoundaryReview.Candidate>()
         val replayColumns = mutableListOf<RotaShadowDecisionReplay.Column>()
         val replayBaselineColumns = mutableListOf<RotaShadowDecisionReplay.Column>()
         for (column in 0..6) {
@@ -633,6 +635,18 @@ internal object OfflineRotaVision {
                     score = (if (rescueAccept) best.score * 0.94f else best.score).coerceIn(0f, 1f)
                 )
             } else {
+                // Capture only the actual leading crop. A lower-ranked same-block
+                // crop could fabricate a plausible review marker on an OFF day.
+                val topBlock = RotaGridModel.blockIndexForY(
+                    assist, column, best.candidate.band.center / sy)
+                nearBoundaryCandidates += RotaNearBoundaryReview.Candidate(
+                    column = column, block = topBlock, rank = 1,
+                    positiveScore = best.positive, rawSeparation = best.rawSeparation,
+                    requiredSeparation = best.requiredSeparation,
+                    confuserPenalty = best.confuserPenalty,
+                    x = (sourceLeft + sourceRight) / 2f,
+                    y = (best.candidate.band.center / sy).coerceIn(0f, assist.imageHeight.toFloat())
+                )
                 deferred += Deferred(
                     column = column,
                     x = (sourceLeft + sourceRight) / 2f,
@@ -723,8 +737,20 @@ internal object OfflineRotaVision {
                 baselineParity = parity
             ))
         }
+        // The normal matcher and both rescue policies have already finished.
+        // These weak candidates are separate, explicitly unconfirmed UI hints,
+        // never accepted profile matches or training samples.
+        val acceptedBlocks = matches.mapNotNull { match ->
+            // Weekly and mature-profile rescues must not become independent anchors.
+            if (decisions[match.column]?.status !in setOf("accepted_normal", "accepted_near_floor"))
+                return@mapNotNull null
+            RotaGridModel.blockIndexForY(assist, match.column, match.y)
+        }
+        val reviewHints = RotaNearBoundaryReview.select(
+            acceptedBlocks, nearBoundaryCandidates, matches.map { it.column }.toSet()
+        ).map { item -> Match(item.x, item.y, item.column, item.positiveScore) }
         return Report(-1, 0f, matches.sortedBy { it.column }, scanned,
-            (0..6).map { decisions.getValue(it) })
+            (0..6).map { decisions.getValue(it) }, reviewHints)
     }
 
     fun findSimilarNames(

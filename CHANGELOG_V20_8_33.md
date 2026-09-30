@@ -1,0 +1,7 @@
+# ShiftWatch 20.8.33 — Weak OCR no longer suppresses saved handwriting search
+
+- Fix the text-first bootstrap when two or more non-exact, sub-0.90 OCR name matches are present. The previous code skipped the saved handwriting model based purely on the number of OCR matches, even though these weak matches were insufficient to seed visual expansion. Saved-profile matching now runs unless two high-confidence (exact or score >= 0.90) OCR hits exist.
+- Keep both existing OCR name markers as **unconfirmed review suggestions**; saved-profile matches use the existing deduplication and existing production score/acceptance safeguards. This change neither trains from weak OCR hits nor lowers handwriting thresholds. The existing seeded visual search still runs when at least one strong OCR hit exists.
+- This targets the second labelled rota's observed bootstrap gap (two weak OCR markers on Monday and Tuesday while three B1 working days had no suggestions). A fresh export from this build is required to measure whether an applicable saved profile recovers additional shifts. No recovery is claimed from the old export.
+- The independent rota also exposes a separate B1 start-time error: the user's labels say 09:30 but structural OCR prefers 09:00 with review required. This patch intentionally does not force a time from labels or make uncertain times authoritative.
+- Bump application version to 20.8.33; extend pure Kotlin tests for weak, strong, mixed, exact and empty OCR-hit sets; refresh version assertions in Python source tests.

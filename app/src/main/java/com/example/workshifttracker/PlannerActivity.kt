@@ -2656,9 +2656,12 @@ private fun ZoomableRotaImage(
             }
             ocrHitCounts = (0..6).map { column -> directHits.count { it.column == column } }
             // Single bootstrap owner: saved-profile matching runs BEFORE OCR-based visual
-            // expansion, never in a competing LaunchedEffect. This also allows OCR expansion
+            // expansion, never in a competing LaunchedEffect. Two weak, non-exact OCR
+            // hits must not suppress saved handwriting search (see v20.8.33).
+            // This also allows OCR expansion
             // after a saved profile finds no matches (the old launch race could skip it forever).
-            if (!reviewOnly && !profileLoaded && !startupVisionProfile.isNullOrBlank() && directHits.size < 2) {
+            if (!reviewOnly && !profileLoaded && !startupVisionProfile.isNullOrBlank() &&
+                RotaViewerStatus.shouldRunSavedProfile(directHits.map { it.exact to it.score })) {
                 profileLoaded = true
                 visionBusy = true
                 visionMessage = "Checking your saved handwriting model…"
@@ -2687,6 +2690,16 @@ private fun ZoomableRotaImage(
                     } else {
                         RotaViewerStatus.completedSuggestions(0)
                     }
+                }
+                // Amber markers are a separate explicit-review queue. They are
+                // never drafts, accepted matches, or positive training examples.
+                val hints = profileReport?.reviewHints.orEmpty().map { hint ->
+                    TapMarker(hint.x, hint.y, draft = null,
+                        suggestionScore = null, origin = "near_boundary_review")
+                }
+                if (hints.isNotEmpty()) {
+                    markers = mergeAutoMarkers(markers, hints)
+                    visionMessage = "${hints.size} uncertain row${if (hints.size == 1) "" else "s"} to check manually • no shift added"
                 }
             }
             if (directHits.isEmpty() && reusedCache == null && profileTraceStatus == "not_attempted") {
@@ -2743,13 +2756,14 @@ private fun ZoomableRotaImage(
                 }
                 val resolved = mergedMarkers.count { it.draft != null }
                 val review = mergedMarkers.size - resolved
+                val uncertainRows = mergedMarkers.count { it.origin == "near_boundary_review" && it.draft == null }
                 visionMessage = when {
                     reviewOnly -> "$resolved detected shift${if (resolved == 1) "" else "s"} ready for review • choose only the ones you want to import"
                     resolved > 0 && review > 0 -> "$resolved candidate${if (resolved == 1) "" else "s"} resolved from text • $review need review"
                     resolved > 0 -> "$resolved candidate${if (resolved == 1) "" else "s"} recognized • review before selecting"
                     directHits.size == 1 -> "Found your name once automatically • review this shift or add another example if the rota contains more"
                     else -> "Found your name automatically • confirm unresolved times before saving"
-                }
+                } + if (uncertainRows > 0) " • $uncertainRows amber row${if (uncertainRows == 1) "" else "s"} need manual checking" else ""
                 visionBusy = false
             }
         }
@@ -3105,11 +3119,13 @@ private fun ZoomableRotaImage(
                 val suggested = marker.draft == null
                 val resolved = marker.draft?.let { !it.requiresTimeConfirmation && it.tier != ScheduleImporter.ConfidenceTier.UNRESOLVED } == true
                 val fill = when {
+                    suggested && marker.origin == "near_boundary_review" -> ComposeColor(0x33FF9800)
                     suggested -> ComposeColor(0x263E8BFF)
                     resolved -> ComposeColor(0x4D4CAF50)
                     else -> ComposeColor(0x4DFF9800)
                 }
                 val outline = when {
+                    suggested && marker.origin == "near_boundary_review" -> ComposeColor(0xFFFFB74D)
                     suggested -> ComposeColor(0xFF72A7FF)
                     resolved -> ComposeColor(0xFF86E48F)
                     else -> ComposeColor(0xFFFFC46B)
@@ -3130,6 +3146,7 @@ private fun ZoomableRotaImage(
                 drawCircle(color = outline, radius = 6.dp.toPx(), center = Offset(cx, cy))
 
                 val label = when {
+                    suggested && marker.origin == "near_boundary_review" -> "check row?"
                     suggested -> {
                         // Preview must never run OCR/structural inference inside Canvas.draw.
                         // Blue markers represent identity proposals only; confirm the name first.
