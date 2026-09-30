@@ -12,12 +12,21 @@ class NearBoundaryReviewIntegrationTests(unittest.TestCase):
         self.assertIn('matches.sortedBy { it.column }', vision)
         self.assertIn('decisions[match.column]?.status !in setOf("accepted_normal", "accepted_near_floor")', vision)
         self.assertIn('confuserPenalty = best.confuserPenalty', vision)
+        self.assertIn('primaryOcr = best.candidate.ocrText != null', vision)
+        self.assertIn('val corroborator = ranked.getOrNull(1)?.takeIf', vision)
+        self.assertIn('corroboratingOcr = corroborator?.candidate?.ocrText != null', vision)
         self.assertNotIn('matches += reviewHints', vision)
 
         selector = (SRC / 'RotaNearBoundaryReview.kt').read_text(encoding='utf-8')
         self.assertIn('candidate.confuserPenalty <= 0.020f', selector)
         self.assertIn('candidate.rawSeparation > -0.030f', selector)
         self.assertIn('required - candidate.rawSeparation <= 0.065f', selector)
+        self.assertIn('candidate.corroboratingOcr', selector)
+        self.assertIn('candidate.corroboratingRawSeparation?.let { it > -0.010f } == true', selector)
+        self.assertIn('candidate.primaryOcr', selector)
+        self.assertIn('candidate.rawSeparation > -0.035f', selector)
+        self.assertIn('required - candidate.rawSeparation <= 0.070f', selector)
+        self.assertIn('(ordinaryNearBoundary || ocrBackedEdge || sameBlockCorroboration)', selector)
 
     def test_hints_have_distinct_unconfirmed_ui_origin(self):
         planner = (SRC / 'PlannerActivity.kt').read_text(encoding='utf-8')

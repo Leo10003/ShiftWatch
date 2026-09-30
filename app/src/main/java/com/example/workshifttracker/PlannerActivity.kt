@@ -3318,7 +3318,7 @@ private fun ZoomableRotaImage(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     if (contextual.isNotEmpty()) {
-                        Text("Best matches", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                        Text(if (contextual.size > 1) "Row time candidates" else "Best match", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
                     }
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         rankedTimes.chunked(3).forEachIndexed { rowIndex, rowTimes ->

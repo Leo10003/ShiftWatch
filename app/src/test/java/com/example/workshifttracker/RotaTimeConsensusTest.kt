@@ -47,4 +47,23 @@ class RotaTimeConsensusTest {
         val suggestions = ScheduleImporter.timeSuggestionsForTap(assist, 250f, 205f)
         assertTrue(suggestions.none { it.time == LocalTime.of(11, 0) })
     }
+    @Test fun ambiguousRowExposesCompetingTimesForManualReviewOnly() {
+        val assist = ScheduleImporter.AssistData(
+            imageWidth = 700,
+            imageHeight = 1000,
+            tokens = listOf(token("09:00", 0, 125), token("09:30", 1, 128)),
+            rowBoundaries = rules
+        )
+        val suggestions = ScheduleImporter.timeSuggestionsForTap(assist, 250f, 205f)
+        assertTrue(suggestions.any { it.time == LocalTime.of(9, 0) })
+        assertTrue(suggestions.any { it.time == LocalTime.of(9, 30) })
+        val draft = ScheduleImporter.draftFromTap(
+            assist = assist, tapX = 250f, tapY = 205f, typicalShiftHours = 8,
+            fallbackWeekStart = LocalDate.of(2026, 9, 21),
+            today = LocalDate.of(2026, 9, 20),
+            lockedWeekStart = LocalDate.of(2026, 9, 21)
+        )
+        assertEquals(null, draft)
+    }
+
 }

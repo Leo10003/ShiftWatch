@@ -2135,9 +2135,18 @@ object ScheduleImporter {
             return listOf(TimeSuggestion(structural.time, 6.0f + structural.confidence, structural.reason))
         }
 
-        // Automatic preview and draft creation share exactly one authoritative block solver.
-        // An unsolved block should not advertise a time borrowed from another column/row.
-        return emptyList()
+        // v20.8.38: an ambiguous row may still expose its own competing structural hypotheses
+        // as MANUAL review choices. This does not auto-assign a time and deliberately requires
+        // at least two distinct in-block alternatives, so one isolated OCR hallucination remains
+        // ineligible (see isolatedWeakHourIsNotPromotedToAutomaticSuggestion).
+        val block = RotaGridModel.confidentBlockForY(assist, column, y) ?: return emptyList()
+        val ambiguous = structuralTimeModel(assist, geometry, candidates)
+            .firstOrNull { it.blockIndex == block && it.ambiguous } ?: return emptyList()
+        val alternatives = ambiguous.alternatives.distinctBy { it.time }
+        if (alternatives.size < 2) return emptyList()
+        return alternatives.take(4).mapIndexed { index, alternative ->
+            TimeSuggestion(alternative.time, 5.0f - index * 0.10f, "ambiguous block alternative")
+        }
     }
 
     /**

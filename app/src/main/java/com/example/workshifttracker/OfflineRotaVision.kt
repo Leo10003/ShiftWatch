@@ -639,13 +639,23 @@ internal object OfflineRotaVision {
                 // crop could fabricate a plausible review marker on an OFF day.
                 val topBlock = RotaGridModel.blockIndexForY(
                     assist, column, best.candidate.band.center / sy)
+                val corroborator = ranked.getOrNull(1)?.takeIf { runnerCandidate ->
+                    RotaGridModel.blockIndexForY(
+                        assist, column, runnerCandidate.candidate.band.center / sy) == topBlock
+                }
                 nearBoundaryCandidates += RotaNearBoundaryReview.Candidate(
                     column = column, block = topBlock, rank = 1,
                     positiveScore = best.positive, rawSeparation = best.rawSeparation,
                     requiredSeparation = best.requiredSeparation,
                     confuserPenalty = best.confuserPenalty,
+                    primaryOcr = best.candidate.ocrText != null,
                     x = (sourceLeft + sourceRight) / 2f,
-                    y = (best.candidate.band.center / sy).coerceIn(0f, assist.imageHeight.toFloat())
+                    y = (best.candidate.band.center / sy).coerceIn(0f, assist.imageHeight.toFloat()),
+                    corroboratingPositiveScore = corroborator?.positive,
+                    corroboratingRawSeparation = corroborator?.rawSeparation,
+                    corroboratingRequiredSeparation = corroborator?.requiredSeparation,
+                    corroboratingConfuserPenalty = corroborator?.confuserPenalty,
+                    corroboratingOcr = corroborator?.candidate?.ocrText != null
                 )
                 deferred += Deferred(
                     column = column,

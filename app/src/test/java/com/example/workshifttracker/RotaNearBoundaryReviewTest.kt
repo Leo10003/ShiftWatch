@@ -7,8 +7,16 @@ import org.junit.Test
 class RotaNearBoundaryReviewTest {
     private fun candidate(column: Int, block: Int?, raw: Float, required: Float?,
                           rank: Int = 1, positive: Float = 0.56f,
-                          confuserPenalty: Float = 0f) =
-        RotaNearBoundaryReview.Candidate(column, block, rank, positive, raw, required, confuserPenalty, 0.5f, 0.5f)
+                          confuserPenalty: Float = 0f,
+                          primaryOcr: Boolean = false,
+                          corroboratingPositive: Float? = null,
+                          corroboratingRaw: Float? = null,
+                          corroboratingRequired: Float? = null,
+                          corroboratingPenalty: Float? = null,
+                          corroboratingOcr: Boolean = false) =
+        RotaNearBoundaryReview.Candidate(column, block, rank, positive, raw, required,
+            confuserPenalty, primaryOcr, 0.5f, 0.5f, corroboratingPositive, corroboratingRaw,
+            corroboratingRequired, corroboratingPenalty, corroboratingOcr)
 
     @Test fun nearBoundaryNeedsTwoAcceptedAnchors() {
         val near = candidate(2, 2, 0.0309f, 0.0406f)
@@ -25,6 +33,33 @@ class RotaNearBoundaryReviewTest {
             candidate(5, 0, -0.0122f, 0.0316f, positive = 0.5671f), // Sat working
             candidate(6, 0, -0.0136f, 0.0360f, positive = 0.5882f)) // Sun working
         assertEquals(listOf(4, 5, 6), RotaNearBoundaryReview.select(listOf(0, 0), input, setOf(0, 1)).map { it.column })
+    }
+
+
+    @Test fun sameBlockOcrRunnerCanCorroborateOriginalWednesday() {
+        // Fresh 20.8.36 original-rota Wednesday: rank 1 and rank 2 both land in B3.
+        // The OCR-derived runner has near-neutral raw separation even though the leading
+        // probe is too weak for the ordinary near-boundary gate.
+        val wednesday = candidate(2, 2, -0.0590f, 0.0338f, positive = 0.5312f,
+            corroboratingPositive = 0.5212f, corroboratingRaw = -0.0051f,
+            corroboratingRequired = 0.0250f, corroboratingPenalty = 0f,
+            corroboratingOcr = true)
+        assertEquals(listOf(2),
+            RotaNearBoundaryReview.select(listOf(2, 2, 2), listOf(wednesday), setOf(0, 1, 3, 6))
+                .map { it.column })
+    }
+
+    @Test fun sameBlockCorroborationNeedsOcrRunnerAndNearNeutralSeparation() {
+        val probeOnly = candidate(2, 2, -0.0590f, 0.0338f, positive = 0.5312f,
+            corroboratingPositive = 0.5212f, corroboratingRaw = -0.0051f,
+            corroboratingRequired = 0.0250f, corroboratingPenalty = 0f,
+            corroboratingOcr = false)
+        val weakRunner = candidate(3, 2, -0.0590f, 0.0338f, positive = 0.5312f,
+            corroboratingPositive = 0.5212f, corroboratingRaw = -0.0110f,
+            corroboratingRequired = 0.0250f, corroboratingPenalty = 0f,
+            corroboratingOcr = true)
+        assertTrue(RotaNearBoundaryReview.select(listOf(2, 2),
+            listOf(probeOnly, weakRunner), emptySet()).isEmpty())
     }
 
     @Test fun originalRotaRejectsFridayConfuserButOffersSaturday() {
@@ -60,4 +95,23 @@ class RotaNearBoundaryReviewTest {
         val hit = candidate(4, 0, 0.01f, 0.035f)
         assertTrue(RotaNearBoundaryReview.select(listOf(0, 0, 2, 2), listOf(hit), emptySet()).isEmpty())
     }
+    @Test fun ocrBackedEdgeStabilizesFridayWithoutAdmittingProbeLedOffDay() {
+        // Fresh 20.8.38 second-rota evidence: Friday's OCR-led B1 candidate jittered
+        // from raw -0.0279 to -0.0328. The nearby Thursday OFF top candidate is
+        // probe-led, so the extended edge must remain OCR-only.
+        val thursdayOff = candidate(3, 0, -0.0312f, 0.0398f, positive = 0.5898f,
+            confuserPenalty = 0.0142f, primaryOcr = false)
+        val fridayWorking = candidate(4, 0, -0.0328f, 0.0368f, positive = 0.5728f,
+            confuserPenalty = 0.0039f, primaryOcr = true)
+        assertEquals(listOf(4),
+            RotaNearBoundaryReview.select(listOf(0, 0), listOf(thursdayOff, fridayWorking), setOf(0, 1))
+                .map { it.column })
+    }
+
+    @Test fun ocrBackedEdgeStillRejectsOriginalFridayConfuser() {
+        val fridayOff = candidate(4, 2, 0.0034f, 0.0574f, positive = 0.7136f,
+            confuserPenalty = 0.0749f, primaryOcr = true)
+        assertTrue(RotaNearBoundaryReview.select(listOf(2, 2), listOf(fridayOff), emptySet()).isEmpty())
+    }
+
 }
