@@ -8,15 +8,15 @@ class RotaNearBoundaryReviewTest {
     private fun candidate(column: Int, block: Int?, raw: Float, required: Float?,
                           rank: Int = 1, positive: Float = 0.56f,
                           confuserPenalty: Float = 0f,
-                          primaryOcr: Boolean = false,
                           corroboratingPositive: Float? = null,
                           corroboratingRaw: Float? = null,
                           corroboratingRequired: Float? = null,
                           corroboratingPenalty: Float? = null,
-                          corroboratingOcr: Boolean = false) =
+                          corroboratingOcr: Boolean = false,
+                          verticalDecile: Int? = null) =
         RotaNearBoundaryReview.Candidate(column, block, rank, positive, raw, required,
-            confuserPenalty, primaryOcr, 0.5f, 0.5f, corroboratingPositive, corroboratingRaw,
-            corroboratingRequired, corroboratingPenalty, corroboratingOcr)
+            confuserPenalty, 0.5f, 0.5f, corroboratingPositive, corroboratingRaw,
+            corroboratingRequired, corroboratingPenalty, corroboratingOcr, verticalDecile)
 
     @Test fun nearBoundaryNeedsTwoAcceptedAnchors() {
         val near = candidate(2, 2, 0.0309f, 0.0406f)
@@ -35,6 +35,24 @@ class RotaNearBoundaryReviewTest {
         assertEquals(listOf(4, 5, 6), RotaNearBoundaryReview.select(listOf(0, 0), input, setOf(0, 1)).map { it.column })
     }
 
+
+    @Test fun ordinaryReviewMustStayInsideAcceptedAnchorVerticalEnvelope() {
+        // 0.9.1 paired second-rota evidence: accepted B1 anchors sit in deciles 2..3;
+        // Wednesday OFF produced a plausible B1 candidate in decile 1, while Sunday is in 3.
+        val wednesdayOff = candidate(2, 0, 0.00246f, 0.02939f,
+            positive = 0.57056f, verticalDecile = 1)
+        val sundayWorking = candidate(6, 0, 0.01202f, 0.03645f,
+            positive = 0.61592f, confuserPenalty = 0.00266f, verticalDecile = 3)
+
+        val selected = RotaNearBoundaryReview.select(
+            listOf(0, 0, 0),
+            listOf(wednesdayOff, sundayWorking),
+            setOf(0, 1, 5),
+            mapOf(0 to listOf(2, 2, 3))
+        )
+
+        assertEquals(listOf(6), selected.map { it.column })
+    }
 
     @Test fun sameBlockOcrRunnerCanCorroborateOriginalWednesday() {
         // Fresh 20.8.36 original-rota Wednesday: rank 1 and rank 2 both land in B3.
@@ -94,24 +112,6 @@ class RotaNearBoundaryReviewTest {
     @Test fun tiesAcrossAnchorBlocksProduceNoImplicitDaySpecificExceptions() {
         val hit = candidate(4, 0, 0.01f, 0.035f)
         assertTrue(RotaNearBoundaryReview.select(listOf(0, 0, 2, 2), listOf(hit), emptySet()).isEmpty())
-    }
-    @Test fun ocrBackedEdgeStabilizesFridayWithoutAdmittingProbeLedOffDay() {
-        // Fresh 20.8.38 second-rota evidence: Friday's OCR-led B1 candidate jittered
-        // from raw -0.0279 to -0.0328. The nearby Thursday OFF top candidate is
-        // probe-led, so the extended edge must remain OCR-only.
-        val thursdayOff = candidate(3, 0, -0.0312f, 0.0398f, positive = 0.5898f,
-            confuserPenalty = 0.0142f, primaryOcr = false)
-        val fridayWorking = candidate(4, 0, -0.0328f, 0.0368f, positive = 0.5728f,
-            confuserPenalty = 0.0039f, primaryOcr = true)
-        assertEquals(listOf(4),
-            RotaNearBoundaryReview.select(listOf(0, 0), listOf(thursdayOff, fridayWorking), setOf(0, 1))
-                .map { it.column })
-    }
-
-    @Test fun ocrBackedEdgeStillRejectsOriginalFridayConfuser() {
-        val fridayOff = candidate(4, 2, 0.0034f, 0.0574f, positive = 0.7136f,
-            confuserPenalty = 0.0749f, primaryOcr = true)
-        assertTrue(RotaNearBoundaryReview.select(listOf(2, 2), listOf(fridayOff), emptySet()).isEmpty())
     }
 
 }

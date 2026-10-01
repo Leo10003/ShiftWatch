@@ -965,22 +965,34 @@ private fun ImportReviewSheet(
     ) { uri ->
         if (uri != null) {
             val confirmed = workingDrafts.filter { draft ->
-                (draft.userConfirmedIdentity || draft.sourceLine.contains("User confirmed identity", true)) &&
-                    (draft.userConfirmedDate || documentDateTrusted()) &&
-                    draft.userConfirmedTime && !draft.requiresTimeConfirmation
+                (draft.userConfirmedIdentity ||
+                    draft.sourceLine.contains("User confirmed identity", true)) &&
+                    draft.userConfirmedTime &&
+                    !draft.requiresTimeConfirmation &&
+                    draft.columnIndex in 0..6 &&
+                    draft.physicalBlockId != null
             }
             diagnosticScope.launch(Dispatchers.IO) {
                 val resolver = context.contentResolver
+                val markerDetails = viewerMarkers.markerDetails
                 val payload = JSONObject().apply {
-                    put("schemaVersion", 1)
+                    put("schemaVersion", 2)
                     put("purpose", "opt-in user-confirmed rota recognition evaluation")
                     put("privacy", "no employee names, no photos, no OCR text, no calendar dates")
                     put("shifts", JSONArray().apply {
                         confirmed.forEach { draft ->
+                            val weekday = draft.columnIndex!!
+                            val block = draft.physicalBlockId
+                            val confirmedMarker = markerDetails.firstOrNull { marker ->
+                                marker.confirmed &&
+                                    marker.weekdayColumn == weekday &&
+                                    marker.physicalBlockIndex == block
+                            }
                             put(JSONObject().apply {
-                                put("weekday", draft.start.dayOfWeek.value - 1)
-                                put("physicalBlock", draft.physicalBlockId ?: JSONObject.NULL)
+                                put("weekday", weekday)
+                                put("physicalBlock", block ?: JSONObject.NULL)
                                 put("startTime", draft.start.toLocalTime().toString())
+                                put("verticalDecile", confirmedMarker?.verticalDecile ?: JSONObject.NULL)
                             })
                         }
                     })
@@ -1493,6 +1505,7 @@ private fun ImportReviewSheet(
                                         put("origin", marker.origin)
                                         put("scoreDecile", marker.scoreBucket ?: JSONObject.NULL)
                                         put("confirmed", marker.confirmed)
+                                        put("verticalDecile", marker.verticalDecile ?: JSONObject.NULL)
                                     })
                                 }
                             })
@@ -1543,7 +1556,7 @@ private fun ImportReviewSheet(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Text("Review rota", style = MaterialTheme.typography.headlineSmall)
-            Text("Tracking “$employeeName” • review before anything is saved", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("Tracking $employeeName")
             if (scanning) {
                 Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.secondaryContainer) {
                     Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -2476,8 +2489,17 @@ private fun ZoomableRotaImage(
         val y: Float,
         val draft: ScheduleImporter.Draft?,
         val suggestionScore: Float? = null,
-        val origin: String = "user_tap"
+        val origin: String = "user_tap",
+        val sourceTop: Float? = null,
+        val sourceBottom: Float? = null,
+        val sourceLeft: Float? = null,
+        val sourceRight: Float? = null,
+        val column: Int? = null
     )
+
+    fun markerColumn(marker: TapMarker): Int =
+        marker.column?.coerceIn(0, 6)
+            ?: ScheduleImporter.columnIndexForX(assistData, marker.x)
 
     val inputFingerprint = remember(assistData) { RotaRecognitionInputKey.full(assistData) }
     val reusedCache = remember(rawBitmap, inputFingerprint, initialVisionProfile, reviewOnly) {
@@ -2517,7 +2539,7 @@ private fun ZoomableRotaImage(
         val suggestedByColumn = MutableList(7) { 0 }
         val confirmedByColumn = MutableList(7) { 0 }
         markers.forEach { marker ->
-            val column = ScheduleImporter.columnIndexForX(assistData, marker.x)
+            val column = markerColumn(marker)
             if (column in 0..6) {
                 if (marker.draft == null) suggestedByColumn[column]++
                 else confirmedByColumn[column]++
@@ -2555,13 +2577,17 @@ private fun ZoomableRotaImage(
             seededSearchDecisions = seededColumnDecisions,
             seededSearchStatus = seededTraceStatus,
             markerDetails = markers.map { marker ->
-                val column = ScheduleImporter.columnIndexForX(assistData, marker.x)
+                val column = markerColumn(marker)
                 RotaDiagnosticEvidence.MarkerDetail(
                     weekdayColumn = column,
                     physicalBlockIndex = RotaGridModel.blockIndexForY(assistData, column, marker.y),
                     origin = if (marker.draft != null) "confirmed_user_selection" else marker.origin,
-                    scoreBucket = marker.suggestionScore?.let { (it.coerceIn(0f, 1f) * 10).toInt().coerceAtMost(9) },
-                    confirmed = marker.draft != null
+                    scoreBucket = marker.suggestionScore?.let {
+                        (it.coerceIn(0f, 1f) * 10).toInt().coerceAtMost(9)
+                    },
+                    confirmed = marker.draft != null,
+                    verticalDecile = RotaDiagnosticEvidence.verticalDecile(
+                        marker.y, assistData.imageHeight.toFloat())
                 )
             }
         ))
@@ -2602,9 +2628,9 @@ private fun ZoomableRotaImage(
     fun mergeAutoMarkers(current: List<TapMarker>, incoming: List<TapMarker>): List<TapMarker> {
         val out = current.toMutableList()
         incoming.forEach { candidate ->
-            val column = ScheduleImporter.columnIndexForX(assistData, candidate.x)
+            val column = markerColumn(candidate)
             val index = out.indexOfFirst { existing ->
-                ScheduleImporter.columnIndexForX(assistData, existing.x) == column &&
+                markerColumn(existing) == column &&
                     kotlin.math.abs(existing.y - candidate.y) <= assistData.imageHeight * 0.035f
             }
             if (index < 0) out += candidate
@@ -2680,7 +2706,12 @@ private fun ZoomableRotaImage(
                 profileColumnDecisions = profileReport?.columnDecisions.orEmpty()
                 if (profileReport != null && profileReport.matches.isNotEmpty()) {
                     val proposed = profileReport.matches.map { match ->
-                        TapMarker(match.x, match.y, draft = null, suggestionScore = match.score, origin = "saved_profile")
+                        TapMarker(
+                            match.x, match.y, draft = null,
+                            suggestionScore = match.score, origin = "saved_profile",
+                            sourceTop = match.sourceTop, sourceBottom = match.sourceBottom,
+                            sourceLeft = match.sourceLeft, sourceRight = match.sourceRight,
+                            column = match.column)
                     }
                     markers = mergeAutoMarkers(markers, proposed)
                     visionMessage = RotaViewerStatus.completedSuggestions(profileReport.matches.size)
@@ -2748,7 +2779,12 @@ private fun ZoomableRotaImage(
                     seededColumnDecisions = report?.columnDecisions.orEmpty()
                     if (report != null) {
                         val visualMarkers = report.matches.map { match ->
-                            TapMarker(match.x, match.y, draft = null, suggestionScore = match.score, origin = "seeded_visual_search")
+                            TapMarker(
+                                match.x, match.y, draft = null,
+                                suggestionScore = match.score, origin = "seeded_visual_search",
+                                sourceTop = match.sourceTop, sourceBottom = match.sourceBottom,
+                                sourceLeft = match.sourceLeft, sourceRight = match.sourceRight,
+                                column = match.column)
                         }
                         mergedMarkers = mergeAutoMarkers(mergedMarkers, visualMarkers)
                         markers = mergedMarkers
@@ -2897,19 +2933,24 @@ private fun ZoomableRotaImage(
                     RotaGridModel.blockIndexForY(assistData, column, y)
                         ?: (y / (sourceHeight * .06f).coerceAtLeast(1f)).toInt()
                 val confirmedBlocks = markers.filter { it.draft != null }.map { marker ->
-                    val column = ScheduleImporter.columnIndexForX(assistData, marker.x)
+                    val column = markerColumn(marker)
                     column to candidateBlock(column, marker.y)
                 }.toSet()
                 val suggestions = report.matches
                     .filter { (it.column to candidateBlock(it.column, it.y)) !in confirmedBlocks }
                     .filter { match -> markers.none { marker ->
                         marker.draft != null &&
-                            ScheduleImporter.columnIndexForX(assistData, marker.x) == match.column &&
+                            markerColumn(marker) == match.column &&
                             kotlin.math.abs(marker.y - match.y) < sourceHeight * 0.035f
                     } }
                     .map { match ->
                         // Newly learned handwriting matches are also review suggestions only.
-                        TapMarker(match.x, match.y, draft = null, suggestionScore = match.score, origin = "learned_visual_search")
+                        TapMarker(
+                            match.x, match.y, draft = null,
+                            suggestionScore = match.score, origin = "learned_visual_search",
+                            sourceTop = match.sourceTop, sourceBottom = match.sourceBottom,
+                            sourceLeft = match.sourceLeft, sourceRight = match.sourceRight,
+                            column = match.column)
                     }
                 val confirmed = (markers.filter { it.draft != null } + suggestions.filter { it.draft != null })
                     .distinctBy { it.draft?.id ?: "${it.x}:${it.y}" }
@@ -3000,7 +3041,7 @@ private fun ZoomableRotaImage(
                         val sourceX = ((baseTap.x - left) / fit).coerceIn(0f, sourceWidth.toFloat())
                         val sourceY = ((baseTap.y - top) / fit).coerceIn(0f, sourceHeight.toFloat())
                         val tappedColumn = ScheduleImporter.columnIndexForX(assistData, sourceX)
-                        val tapRadiusY = sourceHeight * 0.042f
+                        val tapRadiusY = sourceHeight * 0.025f
                         val nearbyIndex = markers.indexOfFirst { marker ->
                             ScheduleImporter.columnIndexForX(assistData, marker.x) == tappedColumn &&
                                 kotlin.math.abs(marker.y - sourceY) <= tapRadiusY
@@ -3100,22 +3141,62 @@ private fun ZoomableRotaImage(
             val drawnHeight = sourceHeight * fit
             val left = (size.width - drawnWidth) / 2f
             val top = if (fitWidth) 44.dp.toPx() else (size.height - drawnHeight) / 2f
-            val highlightHeight = (sourceHeight * 0.048f).coerceAtLeast(50f) * fit
+            val fallbackHighlightHeight = (sourceHeight * 0.032f).coerceAtLeast(34f) * fit
             val placedLabelRects = mutableListOf<android.graphics.RectF>()
 
             markers.forEach { marker ->
                 val cx = left + marker.x * fit
                 val cy = top + marker.y * fit
-                val sourceColumn = ScheduleImporter.columnIndexForX(assistData, marker.x)
-                val sourceBounds = ScheduleImporter.columnBounds(assistData, sourceColumn)
-                val columnLeft = left + sourceBounds.first * fit
-                val columnRight = left + sourceBounds.second * fit
-                val highlightWidth = ((sourceBounds.second - sourceBounds.first) * 0.68f * fit).coerceAtLeast(1f)
-                val clampedLeft = (cx - highlightWidth / 2f).coerceIn(
-                    columnLeft + 3.dp.toPx(),
-                    (columnRight - highlightWidth - 3.dp.toPx()).coerceAtLeast(columnLeft + 3.dp.toPx())
-                )
-                val topLeft = Offset(clampedLeft, cy - highlightHeight / 2f)
+                val sourceColumn = markerColumn(marker)
+                val visualSourceBounds = if (
+                    assistData.documentKind == ScheduleImporter.DocumentKind.HANDWRITTEN_GRID ||
+                    assistData.documentKind == ScheduleImporter.DocumentKind.MIXED
+                ) {
+                    ScheduleImporter.headerColumnBounds(assistData, sourceColumn)
+                } else {
+                    ScheduleImporter.columnBounds(assistData, sourceColumn)
+                }
+                val columnLeft = left + visualSourceBounds.first * fit
+                val columnRight = left + visualSourceBounds.second * fit
+                val columnWidth = (columnRight - columnLeft).coerceAtLeast(1f)
+                val horizontalInset = maxOf(4.dp.toPx(), columnWidth * 0.045f)
+                val minLeft = columnLeft + horizontalInset
+                val maxRight = columnRight - horizontalInset
+                val detectedLeft = marker.sourceLeft?.let { left + it * fit }
+                val detectedRight = marker.sourceRight?.let { left + it * fit }
+                val horizontalPadding = 3.dp.toPx()
+                val hasInkBounds =
+                    detectedLeft != null && detectedRight != null && detectedRight > detectedLeft
+                val inkLeft = if (hasInkBounds) {
+                    (detectedLeft!! - horizontalPadding).coerceAtLeast(minLeft)
+                } else {
+                    minLeft
+                }
+                val inkRight = if (hasInkBounds) {
+                    (detectedRight!! + horizontalPadding).coerceAtMost(maxRight)
+                } else {
+                    maxRight
+                }
+                val clampedLeft = inkLeft.coerceAtMost(maxRight - 1f)
+                val highlightWidth = (inkRight - clampedLeft).coerceAtLeast(1f)
+                val visualCx = clampedLeft + highlightWidth / 2f
+                val detectedTop = marker.sourceTop?.let { top + it * fit }
+                val detectedBottom = marker.sourceBottom?.let { top + it * fit }
+                val verticalPadding = 1.5f.dp.toPx()
+                val maxRowHeight =
+                    (sourceHeight * 0.026f).coerceAtLeast(30f) * fit
+                val detectedHeight = if (
+                    detectedTop != null && detectedBottom != null &&
+                    detectedBottom > detectedTop
+                ) {
+                    detectedBottom - detectedTop + verticalPadding * 2f
+                } else {
+                    fallbackHighlightHeight
+                }
+                val highlightHeight =
+                    detectedHeight.coerceAtMost(maxRowHeight).coerceAtLeast(1f)
+                val rowTop = cy - highlightHeight / 2f
+                val topLeft = Offset(clampedLeft, rowTop)
                 val suggested = marker.draft == null
                 val resolved = marker.draft?.let { !it.requiresTimeConfirmation && it.tier != ScheduleImporter.ConfidenceTier.UNRESOLVED } == true
                 val fill = when {
@@ -3143,7 +3224,11 @@ private fun ZoomableRotaImage(
                     cornerRadius = androidx.compose.ui.geometry.CornerRadius(highlightHeight / 2f, highlightHeight / 2f),
                     style = Stroke(width = if (suggested) 2.dp.toPx() else 3.dp.toPx())
                 )
-                drawCircle(color = outline, radius = 6.dp.toPx(), center = Offset(cx, cy))
+                drawCircle(
+                    color = outline,
+                    radius = 6.dp.toPx(),
+                    center = Offset(visualCx, cy)
+                )
 
                 val label = when {
                     suggested && marker.origin == "near_boundary_review" -> "check row?"
@@ -3192,24 +3277,42 @@ private fun ZoomableRotaImage(
                         if (l < safeLeft) { r += safeLeft - l; l = safeLeft }
                         if (r > safeRight) { l -= r - safeRight; r = safeRight }
                         return android.graphics.RectF(l, topY, r, topY + bubbleHeight)
-                    }
-                    val gap = 5.dp.toPx()
-                    val above = topLeft.y - bubbleHeight - gap
-                    val below = topLeft.y + highlightHeight + gap
-                    val candidates = buildList {
-                        add(candidateRect(cx, above)); add(candidateRect(cx, below))
-                        for (step in 1..4) {
-                            add(candidateRect(cx, above - step * (bubbleHeight + 3.dp.toPx())))
-                            add(candidateRect(cx, below + step * (bubbleHeight + 3.dp.toPx())))
-                        }
-                    }
+                    }                    // Keep the label attached to its own highlighted row.
+                    // Collision-avoidance used to push labels several rows away.
+                    val gap = 2.dp.toPx()
                     val imageTop = top + margin
                     val imageBottom = top + drawnHeight - margin
-                    val rect = candidates.firstOrNull { it.top >= imageTop && it.bottom <= imageBottom && placedLabelRects.none { placed -> android.graphics.RectF.intersects(placed, it) } }
-                        ?: candidateRect(cx, above.coerceAtLeast(imageTop))
+                    val sideInset = maxOf(4.dp.toPx(), columnWidth * 0.08f)
+                    val maxBubbleWidth =
+                        (columnWidth - sideInset * 2f).coerceAtLeast(1f)
+                    val boundedBubbleWidth = bubbleWidth.coerceAtMost(maxBubbleWidth)
+                    val labelCenterX = (columnLeft + columnRight) / 2f
+                    val labelLeft = (labelCenterX - boundedBubbleWidth / 2f).coerceIn(
+                        columnLeft + sideInset,
+                        (columnRight - boundedBubbleWidth - sideInset)
+                            .coerceAtLeast(columnLeft + sideInset)
+                    )
+                    val above = topLeft.y - bubbleHeight - gap
+                    val below = topLeft.y + highlightHeight + gap
+                    val labelTop = when {
+                        above >= imageTop -> above
+                        below + bubbleHeight <= imageBottom -> below
+                        else -> (cy - bubbleHeight / 2f).coerceIn(
+                            imageTop,
+                            (imageBottom - bubbleHeight).coerceAtLeast(imageTop)
+                        )
+                    }
+                    val rect = android.graphics.RectF(
+                        labelLeft,
+                        labelTop,
+                        labelLeft + boundedBubbleWidth,
+                        labelTop + bubbleHeight
+                    )
                     placedLabelRects += android.graphics.RectF(rect)
                     val anchorY = if (rect.centerY() < cy) rect.bottom else rect.top
-                    drawContext.canvas.nativeCanvas.drawLine(cx, cy, rect.centerX(), anchorY, leaderPaint)
+                    val rowEdgeY = if (rect.centerY() < cy) topLeft.y else topLeft.y + highlightHeight
+                    drawContext.canvas.nativeCanvas.drawLine(
+                        rect.centerX(), rowEdgeY, rect.centerX(), anchorY, leaderPaint)
                     drawContext.canvas.nativeCanvas.drawRoundRect(rect.left, rect.top, rect.right, rect.bottom, 9.dp.toPx(), 9.dp.toPx(), bubblePaint)
                     drawContext.canvas.nativeCanvas.drawText(label, rect.centerX(), rect.top + 13.5f.dp.toPx(), paint)
                 }

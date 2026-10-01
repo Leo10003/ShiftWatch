@@ -89,7 +89,11 @@ internal object OfflineRotaVision {
         val x: Float,
         val y: Float,
         val column: Int,
-        val score: Float
+        val score: Float,
+        val sourceTop: Float? = null,
+        val sourceBottom: Float? = null,
+        val sourceLeft: Float? = null,
+        val sourceRight: Float? = null
     )
 
     data class Report(
@@ -125,7 +129,11 @@ internal object OfflineRotaVision {
         val density: Float,
         val aspect: Float,
         val centerX: Float,
-        val centerY: Float
+        val centerY: Float,
+        val inkLeft: Int? = null,
+        val inkTop: Int? = null,
+        val inkRight: Int? = null,
+        val inkBottom: Int? = null
     )
 
     private data class ProfileModel(
@@ -628,34 +636,63 @@ internal object OfflineRotaVision {
                     )
                 }))
             if (normalAccept || rescueAccept) {
+                val winningSignature =
+                    cachedSignature(bitmap, left, right, best.candidate.band)
                 matches += Match(
                     x = (sourceLeft + sourceRight) / 2f,
                     y = (best.candidate.band.center / sy).coerceIn(0f, assist.imageHeight.toFloat()),
                     column = column,
-                    score = (if (rescueAccept) best.score * 0.94f else best.score).coerceIn(0f, 1f)
+                    score = (if (rescueAccept) best.score * 0.94f else best.score).coerceIn(0f, 1f),
+                    sourceTop = ((winningSignature?.inkTop ?: best.candidate.band.top) / sy)
+                        .coerceIn(0f, assist.imageHeight.toFloat()),
+                    sourceBottom = ((winningSignature?.inkBottom ?: best.candidate.band.bottom) / sy)
+                        .coerceIn(0f, assist.imageHeight.toFloat()),
+                    sourceLeft = winningSignature?.inkLeft?.let {
+                        (it / sx).coerceIn(0f, assist.imageWidth.toFloat())
+                    },
+                    sourceRight = winningSignature?.inkRight?.let {
+                        (it / sx).coerceIn(0f, assist.imageWidth.toFloat())
+                    }
                 )
             } else {
                 // Capture only the actual leading crop. A lower-ranked same-block
                 // crop could fabricate a plausible review marker on an OFF day.
                 val topBlock = RotaGridModel.blockIndexForY(
                     assist, column, best.candidate.band.center / sy)
-                val corroborator = ranked.getOrNull(1)?.takeIf { runnerCandidate ->
+                val runnerCandidate = ranked.getOrNull(1)
+                val corroborator = runnerCandidate?.takeIf { candidate ->
                     RotaGridModel.blockIndexForY(
-                        assist, column, runnerCandidate.candidate.band.center / sy) == topBlock
+                        assist, column, candidate.candidate.band.center / sy) == topBlock
+                }
+                val runnerDocumentY = runnerCandidate?.candidate?.band?.center?.div(sy)
+                val runnerBlock = runnerDocumentY?.let {
+                    RotaGridModel.blockIndexForY(assist, column, it)
                 }
                 nearBoundaryCandidates += RotaNearBoundaryReview.Candidate(
                     column = column, block = topBlock, rank = 1,
                     positiveScore = best.positive, rawSeparation = best.rawSeparation,
                     requiredSeparation = best.requiredSeparation,
                     confuserPenalty = best.confuserPenalty,
-                    primaryOcr = best.candidate.ocrText != null,
                     x = (sourceLeft + sourceRight) / 2f,
                     y = (best.candidate.band.center / sy).coerceIn(0f, assist.imageHeight.toFloat()),
                     corroboratingPositiveScore = corroborator?.positive,
                     corroboratingRawSeparation = corroborator?.rawSeparation,
                     corroboratingRequiredSeparation = corroborator?.requiredSeparation,
                     corroboratingConfuserPenalty = corroborator?.confuserPenalty,
-                    corroboratingOcr = corroborator?.candidate?.ocrText != null
+                    corroboratingOcr = corroborator?.candidate?.ocrText != null,
+                    verticalDecile = RotaDiagnosticEvidence.verticalDecile(
+                        best.candidate.band.center / sy, assist.imageHeight.toFloat()),
+                    adjustedScore = best.score,
+                    runnerBlock = runnerBlock,
+                    runnerAdjustedScore = runnerCandidate?.score,
+                    runnerPositiveScore = runnerCandidate?.positive,
+                    runnerRawSeparation = runnerCandidate?.rawSeparation,
+                    runnerRequiredSeparation = runnerCandidate?.requiredSeparation,
+                    runnerConfuserPenalty = runnerCandidate?.confuserPenalty,
+                    runnerVerticalDecile = runnerDocumentY?.let {
+                        RotaDiagnosticEvidence.verticalDecile(
+                            it, assist.imageHeight.toFloat())
+                    }
                 )
                 deferred += Deferred(
                     column = column,
@@ -750,14 +787,23 @@ internal object OfflineRotaVision {
         // The normal matcher and both rescue policies have already finished.
         // These weak candidates are separate, explicitly unconfirmed UI hints,
         // never accepted profile matches or training samples.
-        val acceptedBlocks = matches.mapNotNull { match ->
+        val acceptedAnchorEvidence = matches.mapNotNull { match ->
             // Weekly and mature-profile rescues must not become independent anchors.
-            if (decisions[match.column]?.status !in setOf("accepted_normal", "accepted_near_floor"))
+            val decision = decisions[match.column] ?: return@mapNotNull null
+            if (decision.status !in setOf("accepted_normal", "accepted_near_floor"))
                 return@mapNotNull null
-            RotaGridModel.blockIndexForY(assist, match.column, match.y)
+            val decile = decision.rankedCandidates.firstOrNull()?.verticalDecile
+                ?: return@mapNotNull null
+            val block = RotaGridModel.blockIndexForY(assist, match.column, match.y)
+                ?: return@mapNotNull null
+            block to decile
         }
+        val acceptedBlocks = acceptedAnchorEvidence.map { it.first }
+        val acceptedAnchorDeciles = acceptedAnchorEvidence
+            .groupBy({ it.first }, { it.second })
         val reviewHints = RotaNearBoundaryReview.select(
-            acceptedBlocks, nearBoundaryCandidates, matches.map { it.column }.toSet()
+            acceptedBlocks, nearBoundaryCandidates, matches.map { it.column }.toSet(),
+            acceptedAnchorDeciles
         ).map { item -> Match(item.x, item.y, item.column, item.positiveScore) }
         return Report(-1, 0f, matches.sortedBy { it.column }, scanned,
             (0..6).map { decisions.getValue(it) }, reviewHints)
@@ -986,11 +1032,23 @@ internal object OfflineRotaVision {
                 // without sacrificing manual recall.
                 val calibrated = (best.score * 0.92f + min(0.08f, margin * 1.25f) + if (best.lexical >= 0.88f) 0.02f else 0f)
                     .coerceIn(0f, 1f)
+                val winningSignature =
+                    cachedSignature(bitmap, data.left, data.right, best.candidate.band)
                 matches += Match(
                     x = (sourceLeft + sourceRight) / 2f,
                     y = (best.candidate.band.center / sy).coerceIn(0f, assist.imageHeight.toFloat()),
                     column = column,
-                    score = calibrated
+                    score = calibrated,
+                    sourceTop = ((winningSignature?.inkTop ?: best.candidate.band.top) / sy)
+                        .coerceIn(0f, assist.imageHeight.toFloat()),
+                    sourceBottom = ((winningSignature?.inkBottom ?: best.candidate.band.bottom) / sy)
+                        .coerceIn(0f, assist.imageHeight.toFloat()),
+                    sourceLeft = winningSignature?.inkLeft?.let {
+                        (it / sx).coerceIn(0f, assist.imageWidth.toFloat())
+                    },
+                    sourceRight = winningSignature?.inkRight?.let {
+                        (it / sx).coerceIn(0f, assist.imageWidth.toFloat())
+                    }
                 )
             }
         }
@@ -1433,7 +1491,11 @@ internal object OfflineRotaVision {
             density = activeCount / (GRID_W * GRID_H),
             aspect = sourceWidth.toFloat() / sourceHeight.coerceAtLeast(1),
             centerX = centerX,
-            centerY = centerY
+            centerY = centerY,
+            inkLeft = minX,
+            inkTop = minY,
+            inkRight = maxX + 1,
+            inkBottom = maxY + 1
         )
     }
 

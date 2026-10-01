@@ -272,6 +272,82 @@ object ScheduleImporter {
         columnGeometry(assist).bounds[column.coerceIn(0, 6)]
 
     /**
+     * Visual-only weekday bounds derived from the weekday header labels.
+     *
+     * Handwritten rota photos can contain strong outer borders or unrelated vertical
+     * strokes that are valid image rules but poor visual cell separators. Recognition
+     * keeps using columnGeometry(); the viewer may use this header-aligned geometry so
+     * marker overlays line up with the visible weekday cells.
+     */
+    fun headerColumnBounds(assist: AssistData, column: Int): Pair<Float, Float> {
+        val width = assist.imageWidth.coerceAtLeast(1).toFloat()
+
+        fun weekdayIndex(raw: String): Int? {
+            val t = raw.lowercase(Locale.ROOT)
+                .replace('č', 'c').replace('ć', 'c').replace('š', 's')
+                .replace('ž', 'z').replace('đ', 'd')
+                .filter { it.isLetter() }
+            return when {
+                t.startsWith("poned") -> 0
+                t.startsWith("utor") -> 1
+                t.startsWith("srij") || t.startsWith("sred") -> 2
+                t.startsWith("cetv") -> 3
+                t.startsWith("pet") -> 4
+                t.startsWith("sub") -> 5
+                t.startsWith("ned") -> 6
+                else -> null
+            }
+        }
+
+        val observed = assist.tokens.mapNotNull { token ->
+            if (token.cy > assist.imageHeight * 0.18f) return@mapNotNull null
+            val i = weekdayIndex(token.text) ?: return@mapNotNull null
+            i to token.cx
+        }.groupBy({ it.first }, { it.second })
+            .mapValues { (_, xs) -> xs.average().toFloat() }
+
+        if (observed.isEmpty()) return columnBounds(assist, column)
+
+        val defaultSpacing = width / 7f
+        val spacings = mutableListOf<Float>()
+        val keys = observed.keys.sorted()
+        for (a in keys.indices) for (b in a + 1 until keys.size) {
+            val ia = keys[a]
+            val ib = keys[b]
+            val d = ib - ia
+            if (d > 0) {
+                spacings += (observed.getValue(ib) - observed.getValue(ia)) / d
+            }
+        }
+        val spacing = spacings.sorted().let { vals ->
+            if (vals.isEmpty()) defaultSpacing
+            else vals[vals.size / 2].coerceIn(
+                defaultSpacing * 0.70f,
+                defaultSpacing * 1.30f
+            )
+        }
+        val intercepts = observed.map { (i, x) -> x - i * spacing }.sorted()
+        val firstCenter = intercepts[intercepts.size / 2]
+        val centers = (0..6).map { i ->
+            (firstCenter + i * spacing).coerceIn(0f, width)
+        }
+        val bounds = (0..6).map { i ->
+            val left = if (i == 0) {
+                (centers[0] - spacing / 2f).coerceAtLeast(0f)
+            } else {
+                (centers[i - 1] + centers[i]) / 2f
+            }
+            val right = if (i == 6) {
+                (centers[6] + spacing / 2f).coerceAtMost(width)
+            } else {
+                (centers[i] + centers[i + 1]) / 2f
+            }
+            left to right
+        }
+        return bounds[column.coerceIn(0, 6)]
+    }
+
+    /**
      * Classifies the input before choosing a recognition strategy.  Printed spreadsheets and
      * handwritten rotas are different document types and should not share the same thresholds.
      */
@@ -1408,7 +1484,6 @@ object ScheduleImporter {
             val left = (expected - searchRadius).coerceAtLeast(1)
             val right = (expected + searchRadius).coerceAtMost(bitmap.width - 2)
             (left..right).maxByOrNull { x ->
-                // Sum three adjacent columns so thin/anti-aliased pencil rules still win.
                 darknessScore(x - 1) + darknessScore(x) + darknessScore(x + 1)
             } ?: expected
         }
