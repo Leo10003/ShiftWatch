@@ -12,7 +12,16 @@ class RotaVerificationEngineTest {
         imageWidth = 1400,
         imageHeight = 1000,
         tokens = listOf(
+            // Make the test week structurally authoritative. A weekday label by itself is
+            // intentionally insufficient after the date-authority hardening.
             ScheduleImporter.AssistToken("Monday", 10, 20, 150, 60),
+            ScheduleImporter.AssistToken("21/09", 40, 65, 120, 95),
+            ScheduleImporter.AssistToken("22/09", 240, 65, 320, 95),
+            ScheduleImporter.AssistToken("23/09", 440, 65, 520, 95),
+            ScheduleImporter.AssistToken("24/09", 640, 65, 720, 95),
+            ScheduleImporter.AssistToken("25/09", 840, 65, 920, 95),
+            ScheduleImporter.AssistToken("26/09", 1040, 65, 1120, 95),
+            ScheduleImporter.AssistToken("27/09", 1240, 65, 1320, 95),
             ScheduleImporter.AssistToken("13:00", 40, 300, 120, 340)
         ),
         rowBoundaries = List(7) { listOf(200f, 400f, 600f, 800f) },

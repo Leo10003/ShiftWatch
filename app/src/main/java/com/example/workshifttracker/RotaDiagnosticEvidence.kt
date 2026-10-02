@@ -394,7 +394,8 @@ internal object RotaDiagnosticEvidence {
         val origin: String,
         val scoreBucket: Int?,
         val confirmed: Boolean,
-        val verticalDecile: Int? = null
+        val verticalDecile: Int? = null,
+        val rowYPermille: Int? = null
     )
 
     data class DateHypothesis(

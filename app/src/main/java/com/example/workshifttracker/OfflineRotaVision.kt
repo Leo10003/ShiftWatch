@@ -413,6 +413,13 @@ internal object OfflineRotaVision {
         val deferred = mutableListOf<Deferred>()
         val decisions = linkedMapOf<Int, RotaDiagnosticEvidence.ProfileDecision>()
         val nearBoundaryCandidates = mutableListOf<RotaNearBoundaryReview.Candidate>()
+        data class RowConsensusSource(
+            val candidate: RotaRowConsensusPolicy.Candidate,
+            val x: Float,
+            val y: Float,
+            val score: Float
+        )
+        val rowConsensusCandidates = mutableListOf<RowConsensusSource>()
         val replayColumns = mutableListOf<RotaShadowDecisionReplay.Column>()
         val replayBaselineColumns = mutableListOf<RotaShadowDecisionReplay.Column>()
         for (column in 0..6) {
@@ -635,6 +642,36 @@ internal object OfflineRotaVision {
                         confuserScore = item.negative
                     )
                 }))
+
+            ranked.take(6).forEachIndexed { index, item ->
+                val documentY = (item.candidate.band.center / sy)
+                    .coerceIn(0f, assist.imageHeight.toFloat())
+                val block = RotaGridModel.blockIndexForY(assist, column, documentY)
+                    ?: return@forEachIndexed
+                val bounds = RotaGridModel.boundsForBlock(assist, column, block)
+                    ?: return@forEachIndexed
+                val blockHeight = (bounds.second - bounds.first)
+                    .coerceAtLeast(assist.imageHeight.coerceAtLeast(1) * 0.025f)
+                val rowFraction = ((documentY - bounds.first) / blockHeight)
+                    .coerceIn(0f, 1f)
+                rowConsensusCandidates += RowConsensusSource(
+                    RotaRowConsensusPolicy.Candidate(
+                        column = column,
+                        block = block,
+                        rank = index + 1,
+                        rowFraction = rowFraction,
+                        adjustedScore = item.score,
+                        positiveScore = item.positive,
+                        rawSeparation = item.rawSeparation,
+                        requiredSeparation = item.requiredSeparation,
+                        confuserPenalty = item.confuserPenalty,
+                        ocrDerived = item.candidate.ocrText != null
+                    ),
+                    x = (sourceLeft + sourceRight) / 2f,
+                    y = documentY,
+                    score = item.positive
+                )
+            }
             if (normalAccept || rescueAccept) {
                 val winningSignature =
                     cachedSignature(bitmap, left, right, best.candidate.band)
@@ -761,6 +798,40 @@ internal object OfflineRotaVision {
                 }
             }
         }
+        // v0.9.16 row-consensus safety layer. It does not alter raw identity scores.
+        // Only normal/near-floor matches can establish row geometry; rescue matches never anchor it.
+        fun localRowFraction(column: Int, y: Float, block: Int): Float? {
+            val bounds = RotaGridModel.boundsForBlock(assist, column, block) ?: return null
+            val blockHeight = (bounds.second - bounds.first)
+                .coerceAtLeast(assist.imageHeight.coerceAtLeast(1) * 0.025f)
+            return ((y - bounds.first) / blockHeight).coerceIn(0f, 1f)
+        }
+
+        val trustedRowAnchors = matches.mapNotNull { match ->
+            val decision = decisions[match.column] ?: return@mapNotNull null
+            if (decision.status !in setOf("accepted_normal", "accepted_near_floor"))
+                return@mapNotNull null
+            val block = RotaGridModel.blockIndexForY(assist, match.column, match.y)
+                ?: return@mapNotNull null
+            val rowFraction = localRowFraction(match.column, match.y, block)
+                ?: return@mapNotNull null
+            RotaRowConsensusPolicy.Anchor(match.column, block, rowFraction)
+        }
+        val rowPlan = RotaRowConsensusPolicy.select(
+            trustedRowAnchors,
+            rowConsensusCandidates.map { it.candidate },
+            matches.map { it.column }.toSet()
+        )
+        val rowConsensusReviewHints = rowPlan.reviewCandidates.mapNotNull { selected ->
+            rowConsensusCandidates.firstOrNull { source ->
+                source.candidate.column == selected.column &&
+                    source.candidate.rank == selected.rank &&
+                    source.candidate.block == selected.block
+            }?.let { source ->
+                Match(source.x, source.y, selected.column, source.score)
+            }
+        }
+
         // Diagnostic only. Never append replay matches or modify the accepted matcher result.
         val replay = RotaShadowDecisionReplay.replay(replayColumns, profiles.size, model.negatives.size)
         val baselineReplay = RotaShadowDecisionReplay.replay(
@@ -801,10 +872,15 @@ internal object OfflineRotaVision {
         val acceptedBlocks = acceptedAnchorEvidence.map { it.first }
         val acceptedAnchorDeciles = acceptedAnchorEvidence
             .groupBy({ it.first }, { it.second })
-        val reviewHints = RotaNearBoundaryReview.select(
-            acceptedBlocks, nearBoundaryCandidates, matches.map { it.column }.toSet(),
-            acceptedAnchorDeciles
-        ).map { item -> Match(item.x, item.y, item.column, item.positiveScore) }
+        val reviewHints = (
+            RotaNearBoundaryReview.select(
+                acceptedBlocks, nearBoundaryCandidates, matches.map { it.column }.toSet(),
+                acceptedAnchorDeciles
+            ).map { item -> Match(item.x, item.y, item.column, item.positiveScore) } +
+                rowConsensusReviewHints
+            ).filter { hint -> matches.none { it.column == hint.column } }
+            .distinctBy { it.column }
+            .sortedBy { it.column }
         return Report(-1, 0f, matches.sortedBy { it.column }, scanned,
             (0..6).map { decisions.getValue(it) }, reviewHints)
     }

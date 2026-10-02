@@ -7,7 +7,7 @@ SRC = ROOT / 'app/src/main/java/com/example/workshifttracker'
 class NearBoundaryReviewIntegrationTests(unittest.TestCase):
     def test_production_matches_stay_separate(self):
         vision = (SRC / 'OfflineRotaVision.kt').read_text(encoding='utf-8')
-        self.assertIn('val reviewHints = RotaNearBoundaryReview.select(', vision)
+        self.assertIn('RotaNearBoundaryReview.select(', vision)
         self.assertIn('(0..6).map { decisions.getValue(it) }, reviewHints)', vision)
         self.assertIn('matches.sortedBy { it.column }', vision)
         self.assertIn('val decision = decisions[match.column] ?: return@mapNotNull null', vision)

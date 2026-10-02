@@ -976,7 +976,7 @@ private fun ImportReviewSheet(
                 val resolver = context.contentResolver
                 val markerDetails = viewerMarkers.markerDetails
                 val payload = JSONObject().apply {
-                    put("schemaVersion", 2)
+                    put("schemaVersion", 3)
                     put("purpose", "opt-in user-confirmed rota recognition evaluation")
                     put("privacy", "no employee names, no photos, no OCR text, no calendar dates")
                     put("shifts", JSONArray().apply {
@@ -993,6 +993,7 @@ private fun ImportReviewSheet(
                                 put("physicalBlock", block ?: JSONObject.NULL)
                                 put("startTime", draft.start.toLocalTime().toString())
                                 put("verticalDecile", confirmedMarker?.verticalDecile ?: JSONObject.NULL)
+                                put("rowYPermille", confirmedMarker?.rowYPermille ?: JSONObject.NULL)
                             })
                         }
                     })
@@ -1506,6 +1507,7 @@ private fun ImportReviewSheet(
                                         put("scoreDecile", marker.scoreBucket ?: JSONObject.NULL)
                                         put("confirmed", marker.confirmed)
                                         put("verticalDecile", marker.verticalDecile ?: JSONObject.NULL)
+                                        put("rowYPermille", marker.rowYPermille ?: JSONObject.NULL)
                                     })
                                 }
                             })
@@ -2587,7 +2589,10 @@ private fun ZoomableRotaImage(
                     },
                     confirmed = marker.draft != null,
                     verticalDecile = RotaDiagnosticEvidence.verticalDecile(
-                        marker.y, assistData.imageHeight.toFloat())
+                        marker.y, assistData.imageHeight.toFloat()),
+                    rowYPermille = ((marker.y /
+                        assistData.imageHeight.coerceAtLeast(1).toFloat())
+                        .coerceIn(0f, 0.999f) * 1000f).toInt()
                 )
             }
         ))
@@ -3159,26 +3164,35 @@ private fun ZoomableRotaImage(
                 val columnLeft = left + visualSourceBounds.first * fit
                 val columnRight = left + visualSourceBounds.second * fit
                 val columnWidth = (columnRight - columnLeft).coerceAtLeast(1f)
-                val horizontalInset = maxOf(4.dp.toPx(), columnWidth * 0.045f)
-                val minLeft = columnLeft + horizontalInset
-                val maxRight = columnRight - horizontalInset
+                val safeInset = maxOf(5.dp.toPx(), columnWidth * 0.08f)
+                val minLeft = columnLeft + safeInset
+                val maxRight = columnRight - safeInset
                 val detectedLeft = marker.sourceLeft?.let { left + it * fit }
                 val detectedRight = marker.sourceRight?.let { left + it * fit }
-                val horizontalPadding = 3.dp.toPx()
+                val horizontalPadding = 4.dp.toPx()
                 val hasInkBounds =
                     detectedLeft != null && detectedRight != null && detectedRight > detectedLeft
-                val inkLeft = if (hasInkBounds) {
+                val rawInkLeft = if (hasInkBounds) {
                     (detectedLeft!! - horizontalPadding).coerceAtLeast(minLeft)
                 } else {
                     minLeft
                 }
-                val inkRight = if (hasInkBounds) {
+                val rawInkRight = if (hasInkBounds) {
                     (detectedRight!! + horizontalPadding).coerceAtMost(maxRight)
                 } else {
                     maxRight
                 }
-                val clampedLeft = inkLeft.coerceAtMost(maxRight - 1f)
-                val highlightWidth = (inkRight - clampedLeft).coerceAtLeast(1f)
+                val availableWidth = (maxRight - minLeft).coerceAtLeast(1f)
+                val minimumNameWidth = columnWidth * 0.46f
+                val inkCenter = ((rawInkLeft + rawInkRight) / 2f)
+                    .coerceIn(minLeft, maxRight)
+                val desiredWidth = maxOf(
+                    rawInkRight - rawInkLeft,
+                    minimumNameWidth.coerceAtMost(availableWidth)
+                )
+                val clampedLeft = (inkCenter - desiredWidth / 2f)
+                    .coerceIn(minLeft, (maxRight - desiredWidth).coerceAtLeast(minLeft))
+                val highlightWidth = desiredWidth.coerceAtMost(availableWidth).coerceAtLeast(1f)
                 val visualCx = clampedLeft + highlightWidth / 2f
                 val detectedTop = marker.sourceTop?.let { top + it * fit }
                 val detectedBottom = marker.sourceBottom?.let { top + it * fit }

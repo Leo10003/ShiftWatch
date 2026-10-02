@@ -14,7 +14,7 @@ class MarkerInkBoundsSourceTest(unittest.TestCase):
         planner = (ROOT / "app/src/main/java/com/example/workshifttracker/PlannerActivity.kt").read_text(encoding="utf-8")
         self.assertIn("val detectedLeft = marker.sourceLeft?.let", planner)
         self.assertIn("val detectedRight = marker.sourceRight?.let", planner)
-        self.assertIn("val highlightWidth = (inkRight - clampedLeft).coerceAtLeast(1f)", planner)
+        self.assertIn("val desiredWidth = maxOf(", planner)
 
     def test_0912_detector_regression_is_reverted(self):
         source = (ROOT / "app/src/main/java/com/example/workshifttracker/ScheduleImporter.kt").read_text(encoding="utf-8")
